@@ -3,20 +3,29 @@
 import StringIO, re
 
 class Doubletalk(object):
-	DELIMITERS 			= "[.:!,;+*^&'\"\-\\/\|=@#$%()?<>\s]"
+	DELIMITERS = "[.:!,;+*^&'\"\-\\/\|=@#$%()?<>\s]"
+	
 	tree = {
+		'[\s]': 	'space',
+		'[\n]':		'newline',
+		'[\t]':		'tab',
 		'[/]': {
-			'[*]': 'comment_block_open',
-			'[/]': 'comment_line',
+			'[*]': 	'comment_block_open',
+			'[/]': 	'comment_line',
+			None:	'divide'
 		},
 		'[*]': {
-			'[/]': 'comment_block_close'
+			'[/]':	'comment_block_close',
+			None:	'multiply'
 		},
 		'[=]': {
 			'[=]': {
-				'[=]': 'equal_strict'
+				'[=]': 	'equal_strict',
+				None:	'equal'
 			}
-		}
+		},
+		'[0-9]': 					'number',
+		'[_a-zA-Z][_a-zA-Z0-9]*':	'identifier'
 	}
 	
 class Scanner(object):
@@ -71,66 +80,67 @@ class Lexer(object):
 			
 		return verbatim
 		
+	def next(self):
+	
+		tree = self.syntax.tree
+		word = []
+		
+		while True:
+			symbol = self.scanner.scan()
+			
+			"""
+			# ignore spaces
+			if symbol == ' ' or symbol == '\n' or symbol == '\t':
+				continue
+			"""
+			# EOF				
+			if symbol is None:
+				return False
+							
+			# search in syntax tree
+			for regexp in tree:
+				match = None
+				#print 'Trying %s with %s' % (regexp, symbol)
+				if regexp is None:
+					tree = self.syntax.tree
+					continue
+				elif re.match(regexp, symbol, re.M):
+					word.append(symbol)
+					match = symbol
+					break
+			
+			if match is not None:
+				# there is a possible continuation to this symbol
+				if isinstance(tree.get(regexp, None), dict):
+					# move forward in tree
+					tree = tree[regexp]
+					continue
+				else:
+					print tree[regexp]
+			
+			# move to tree root
+			tree = self.syntax.tree
+				
+			if len(word) == 0:
+				continue
+				
+			# now word is recognized
+			return ''.join(word)	
+			
+	
 	def parse(self):
 		while True:
-			token = self.scanner.scan()
-						
-			for regexp in self.syntax.tree:
-				if re.match(regexp, token):
-					print token
+			n = self.next()
+			if n is False:
+				break
+			print n
 			
-			if token == '"':
-				return ''.join(self.verbatim('"'))
+						
 		
 
-lex = Lexer(Doubletalk(), 'sample.dtk').parse()			
+lex = Lexer(Doubletalk(), 'test.dtk')
+
+lex.parse()
+
 #print lex
-
-"""
-def scan(self):
-	
-		if self.src.closed:
-			# already at EOF
-			return None
-			
-		branch = self.syntax.tree
-		self.token = []
-
-		while True:
-			char = self.src.read(1)
-			
-			if not char:
-				# EOF reached
-				self.src.close()
-				break
-				
-			for regexp in branch:
-				c = re.match(regexp, char)
-				if c is not None:
-					self.token.append(char)
-				
-					if isinstance(branch[regexp], dict):
-						branch = branch[regexp]
-					elif branch[regexp] == 0:
-						return ''.join(self.token) if len(self.token) > 0 else None
-					else:
-						p = len(branch) - branch[regexp]
-						while len(branch) > p:
-  							branch.pop()
-  				else:
-  					break
-  						
-  							
-		return ''.join(self.token) if len(self.token) > 0 else None	
-					
-
-"""
-
-
-
-
-
-
-
-
 
