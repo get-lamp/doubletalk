@@ -3,37 +3,49 @@
 import StringIO, re
 
 class Doubletalk(object):
-	DELIMITERS = "[.:!,;+*^&'\"\-\\/\|=@#$%()?<>\s]"
+	DELIMITERS = "[.:!,;+*^&'\"\-\\/\|=$()?<>\s]"
 	
-	tree = {
-		'[\s]': 	'space',
-		'[\n]':		'newline',
-		'[\t]':		'tab',
-		'[/]': {
-			'[*]': 	'comment_block_open',
-			'[/]': 	'comment_line',
-			None:	'divide'
+	symbols = {
+		r'[\s]': 	'[space]',
+		r'^\n$':	'[newline]',
+		r'[\t]':	'[tab]',
+		r'[/]': {
+			r'[*]': '[comment_block_open]',
+			r'[/]': '[comment_line]',
+			None:	'[divide]'
 		},
-		'[*]': {
-			'[/]':	'comment_block_close',
-			None:	'multiply'
+		r'[*]': {
+			r'[/]':	'[comment_block_close]',
+			None:	'[multiply]'
 		},
-		'[=]': {
-			'[=]': {
-				'[=]': 	'equal_strict',
-				None:	'equal'
-			}
+		r'[=]': {
+			r'[=]': {
+				r'[=]': '[equal_strict]',
+				None:	'[equal]'
+			},
+			None: '[assign]'
 		},
-		'[0-9]': 					'number',
-		'[_a-zA-Z][_a-zA-Z0-9]*':	'identifier'
+		r'[0-9]': 						'[number]',
+		r'[_a-zA-Z][_a-zA-Z0-9]*':		'[identifier]',
+		r'[@][_a-zA-Z][_a-zA-Z0-9]*':	'[character]',
+		r'[#][_a-zA-Z][_a-zA-Z0-9]*':	'[place]',
+		r'[%][_a-zA-Z][_a-zA-Z0-9]*':	'[mobile]',
+		r'[&][_a-zA-Z][_a-zA-Z0-9]*':	'[item]'
+	}
+
+	grammar = {
+
 	}
 	
-class Scanner(object):
+class Lexer(object):
 	
 	def __init__(self, syntax, source, is_file=True):
 		self.src	= open(source) if is_file else StringIO.StringIO(source)
 		self.syntax	= syntax
 		self.token	= []
+
+	def __exit__(self):
+		self.src.close()
 		
 	def scan(self):
 	
@@ -42,6 +54,7 @@ class Scanner(object):
 			return None
 
 		while True:
+			# read character
 			char = self.src.read(1)
 			if not char:
 				# EOF
@@ -50,6 +63,7 @@ class Scanner(object):
 			
 			c = re.match(self.syntax.DELIMITERS, char)
 			
+			# no delimiter found
 			if c is None:
 				self.token.append(char)
 			else:
@@ -61,38 +75,17 @@ class Scanner(object):
 					self.token = []
 					return tkn
 		
-		return self.token if len(self.token) > 0 else None
-		
-class Lexer(object):
-	
-	def __init__(self, syntax, source, is_file=True):
-		self.syntax 	= syntax
-		self.scanner 	= Scanner(syntax, source, is_file)
-		
-	def verbatim(self, stop):
-		verbatim = []
-		while True:
-			symbol = self.scanner.scan()
-			if symbol == stop or symbol is None:
-				break
-			else:
-				verbatim.append(symbol)
-			
-		return verbatim
-		
+		return ''.join(self.token) if len(self.token) > 0 else None
+
 	def next(self):
 	
-		tree = self.syntax.tree
+		tree = self.syntax.symbols
 		word = []
 		
 		while True:
-			symbol = self.scanner.scan()
-			
-			"""
-			# ignore spaces
-			if symbol == ' ' or symbol == '\n' or symbol == '\t':
-				continue
-			"""
+			# get next symbol
+			symbol = self.scan()
+
 			# EOF				
 			if symbol is None:
 				return False
@@ -100,47 +93,58 @@ class Lexer(object):
 			# search in syntax tree
 			for regexp in tree:
 				match = None
-				#print 'Trying %s with %s' % (regexp, symbol)
 				if regexp is None:
-					tree = self.syntax.tree
 					continue
-				elif re.match(regexp, symbol, re.M):
+
+				if re.match(regexp, symbol, re.M):
 					word.append(symbol)
-					match = symbol
-					break
-			
-			if match is not None:
-				# there is a possible continuation to this symbol
-				if isinstance(tree.get(regexp, None), dict):
 					# move forward in tree
 					tree = tree[regexp]
-					continue
-				else:
-					print tree[regexp]
-			
-			# move to tree root
-			tree = self.syntax.tree
-				
-			if len(word) == 0:
-				continue
-				
-			# now word is recognized
-			return ''.join(word)	
-			
+					match = symbol
+					break
 	
+			if match is not None:
+				# there is a possible continuation to this symbol
+				if isinstance(tree, dict):
+					continue
+			else:
+				tree = tree.get(None)
+			
+			if len(word) == 0:
+				# move to tree root
+				tree = self.syntax.symbols
+				continue
+
+			return (''.join(word), tree)
+		
+class Parser(object):
+	
+	def __init__(self, syntax, source, is_file=True):
+		self.syntax = syntax
+		self.lexer 	= Lexer(syntax, source, is_file)
+		
+	def verbatim(self, stop):
+		verbatim = []
+		while True:
+			symbol = self.lexer.scan()
+			if symbol == stop or symbol is None:
+				break
+			else:
+				verbatim.append(symbol)
+			
+		return verbatim
+		
 	def parse(self):
 		while True:
-			n = self.next()
+			n = self.lexer.next()
 			if n is False:
 				break
 			print n
+
+
 			
 						
 		
 
-lex = Lexer(Doubletalk(), 'test.dtk')
-
+lex = Parser(Doubletalk(), 'test.dtk')
 lex.parse()
-
-#print lex
-
