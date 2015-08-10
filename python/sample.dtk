@@ -1,41 +1,9 @@
-a = 5;
 
-b = prnt 'niak!';
+TO [@a]
+CLEARANCE [@a, @b, @c, UK, US]
 
-prnt b;
-
-b = false;
-
-if(a != b):
-	prnt 'Yep<br/>';
-	
-	if(b != a):
-		prnt 'Obviously right...<br/>';
-		prnt (a * 5 / (5 * 10 / 2)) * 99 + 1;
-	else:
-		prnt 'Obviously impossible...<br/>';
-	end;
-	
-	prnt '...<br/>';
-	
-else:
-	prnt 'Nop';
-	prnt 'And now for something completely different...<hr/>';
-	
-end;
-
-prnt 'anyways<br/>';
-
-repeat(a):
-	prnt 'We must repeat...<br/>';
-end;
-
-
-/*
-def afunc(arg1, arg2, arg3):
-	prnt "YOU 'CALL' THIS A FUNCTION!? HA!<br/>";
-	prnt arg1 + arg2 + arg3;
-end;
-
-afunc('a', 'b', 'c');
-*/
+blown FROM [@]				--> returns @ having property blown == TRUE
+{expression} AS identifier 	--> assigns expression retrn to identifier
+EXPECT {block} 				--> returns TRUE if ALL statements are TRUE
+WHICHEVER {block}			--> returns TRUE if ANY statements are TRUE
+FAILSAFE {block}			--> executes if stack value is FALSE

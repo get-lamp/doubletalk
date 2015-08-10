@@ -1,9 +1,1 @@
-/*
-	A jsfhsd yusfdg sdi sdf 76576
-*/
-a =    1
-b = 2
-prnt a + b
-
-prnt "A nice string"
-
+if a = 1 + 1 + 2 then somethingElse = 1
