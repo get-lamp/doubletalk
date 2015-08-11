@@ -4,7 +4,9 @@ import StringIO, re
 
 class SyntaxTree(object):
 	def __init__(self, syntax={}):
-		self.syntax = syntax
+		self.syntax 	= syntax
+		self.route 		= [self.syntax]
+		self.sentence 	= [] 
 
 	def _up(self):
 		pass
@@ -15,19 +17,37 @@ class SyntaxTree(object):
 	def hint(self):
 		pass
 
-	def push(self):
-		pass
+	def push(self, word):
+		print word
+		branch = self.route[-1]
+
+		if word in branch:
+			self.sentence.append(word)
+				
+			if callable(branch[word]):
+				branch[word] = branch[word]()
+
+			self.route.append(branch[word])
 
 	def last(self):
 		pass
 
 	def get(self):
-		pass
+		return self.sentence;
+
+	def __len__(self):
+		return len(sentence)
 
 	def clear(self):
 		pass
 
 class Doubletalk(object):
+
+	class Program(object):
+		pass
+
+	class Block(object):
+		pass
 
 	class Expression(object):
 		pass
@@ -221,17 +241,11 @@ class Doubletalk(object):
 
 	grammar = {
 		'<const>': {
-			'<op>': 	lambda: Doubletalk.grammar
+			'<op>': lambda: Doubletalk.grammar
 		},
 		'<ident>': {
 			'<op>':	lambda: Doubletalk.grammar,
-		},
-		'<keyword>prnt': lambda: Doubletalk.grammar,
-		'<keyword>if':	[
-			lambda: Doubletalk.grammar,
-			{'<keyword>then': lambda: Doubletalk.grammar}
-		],
-		'<preprocessor><keyword>include': lambda: Doubletalk.grammar,
+		}
 	}
 
 	grammarTree = SyntaxTree(grammar)
@@ -349,7 +363,7 @@ class Lexer(object):
 			return tree(token)
 		
 class Parser(object):
-	
+
 	def __init__(self, lang, source, is_file=True):
 		self.lang	= lang
 		self.lexer 	= Lexer(lang, source, is_file)
@@ -387,7 +401,8 @@ class Parser(object):
 		
 	def parse(self, tree=[]):
 
-		legal = [self.lang.grammar]
+		tree = self.lang.grammarTree
+
 
 		while True:
 			lexeme = self.lexer.next()
@@ -415,6 +430,12 @@ class Parser(object):
 					#tree.append(lexeme.handle(self.parse))
 					continue
 
+			if len(tree) == 0
+
+			tree.push(lexeme.__repr__())
+
+			"""
+
 			t = lexeme.__repr__()
 
 			if isinstance(legal, list):
@@ -435,9 +456,13 @@ class Parser(object):
 				print 'Illegal: %s' % (lexeme)
 				print legal
 				break
-
+			"""
+		"""
 		print '-' * 80
 		return tree
+		"""
+
+		print tree.get()
 
 
 			
@@ -449,5 +474,5 @@ class Parser(object):
 lex = Parser(Doubletalk(), 'test.dtk')
 tree = lex.parse()
 
-print tree
+#print tree
 
