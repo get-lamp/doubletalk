@@ -1,0 +1,8 @@
+doubletalk	doubletalk-module.html
+doubletalk.__package__	doubletalk-module.html#__package__
+doubletalk.parser	doubletalk.parser-module.html
+doubletalk.parser.__package__	doubletalk.parser-module.html#__package__
+doubletalk.parser.Lexer	doubletalk.parser.Lexer-class.html
+doubletalk.parser.Parser	doubletalk.parser.Parser-class.html
+doubletalk.parser.Scanner	doubletalk.parser.Scanner-class.html
+doubletalk.parser.Token	doubletalk.parser.Token-class.html
