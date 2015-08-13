@@ -24,6 +24,8 @@ class SFACompleter:
                 self.rules[first].append(second)
         fin.close()
 
+        print self.rules
+
     def process(self,tokens):
         if len(tokens) == 0:
             return []

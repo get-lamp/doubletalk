@@ -1,4 +1,4 @@
-$	>>	<expr>
-$	>>	if	>> <expr> >> then >> <sentence> << end
-$	>>	prnt <expr>
+$ >> <expr>
+$ >> if	>> <expr> >> then >> <sentence> << end
+$ >> prnt <expr>
 

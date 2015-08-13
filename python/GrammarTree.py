@@ -1,6 +1,17 @@
+import re
+
 class GrammarTree(object):
-	def __init__(self):
-		self.sentence 	= [] 
+	def __init__(self, grammar):
+
+		grammar = file(grammar, 'r')
+
+		for line in grammar:
+			terms = re.split(">>", line)
+			
+			for term in terms:
+				print term.strip()
+			break
+
 
 	def _up(self):
 		pass

@@ -5,18 +5,6 @@ from GrammarTree import *
 
 class Doubletalk(object):
 
-	class Program(object):
-		pass
-
-	class Block(object):
-		pass
-
-	class Expression(object):
-		pass
-
-	class Statement(object):
-		pass
-
 	class Lexeme(object):
 		def __init__(self, token, **kwargs):
 			self.token = token
@@ -51,6 +39,9 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<const>'
 
+		def __str__(self):
+			return "<%s:%s const %s>" % (self.token.line, self.token.char, self.token.word)
+
 	class String(Constant):
 		pass
 	
@@ -61,6 +52,9 @@ class Doubletalk(object):
 	class Operator(Lexeme):
 		def __repr__(self):
 			return '<op>'
+
+		def __str__(self):
+			return "<%s:%s op %s>" % (self.token.line, self.token.char, self.token.word)
 
 	class Assign(Operator):
 		pass
@@ -210,8 +204,6 @@ class Doubletalk(object):
 		}
 	}
 
-	grammarTree = GrammarTree(grammar)
-
 	
 class Lexer(object):
 
@@ -326,6 +318,12 @@ class Lexer(object):
 		
 class Parser(object):
 
+	class Expression(object):
+		pass
+
+	class Statement(object):
+		pass
+
 	def __init__(self, lang, source, is_file=True):
 		self.lang	= lang
 		self.lexer 	= Lexer(lang, source, is_file)
@@ -363,7 +361,7 @@ class Parser(object):
 		
 	def parse(self, tree=[]):
 
-
+		legal = self.lang.grammar;
 		sentence = []
 
 		while True:
@@ -393,16 +391,9 @@ class Parser(object):
 					continue
 			# end of block --- catch preprocessor directives
 
-			#if isinstance()
-			
-
-			sentence.append(lexeme.__repr__())
-
-	
-
-			"""
-
 			t = lexeme.__repr__()
+
+			print t
 
 			if isinstance(legal, list):
 				legal = legal.pop(0)
@@ -419,22 +410,9 @@ class Parser(object):
 				tree.append(lexeme)
 
 			else:
-				print 'Illegal: %s' % (lexeme)
-				print legal
+				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
 				break
-			"""
-		"""
-		print '-' * 80
-		return tree
-		"""
-
-	
-
-
-			
-
-			
-			
+		
 			
 			
 lex = Parser(Doubletalk(), 'test.dtk')
