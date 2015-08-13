@@ -1,45 +1,7 @@
 #!/usr/bin/python
 
 import StringIO, re
-
-class SyntaxTree(object):
-	def __init__(self, syntax={}):
-		self.syntax 	= syntax
-		self.route 		= [self.syntax]
-		self.sentence 	= [] 
-
-	def _up(self):
-		pass
-
-	def _down(self):
-		pass
-
-	def hint(self):
-		pass
-
-	def push(self, word):
-		print word
-		branch = self.route[-1]
-
-		if word in branch:
-			self.sentence.append(word)
-				
-			if callable(branch[word]):
-				branch[word] = branch[word]()
-
-			self.route.append(branch[word])
-
-	def last(self):
-		pass
-
-	def get(self):
-		return self.sentence;
-
-	def __len__(self):
-		return len(sentence)
-
-	def clear(self):
-		pass
+from GrammarTree import *
 
 class Doubletalk(object):
 
@@ -248,7 +210,7 @@ class Doubletalk(object):
 		}
 	}
 
-	grammarTree = SyntaxTree(grammar)
+	grammarTree = GrammarTree(grammar)
 
 	
 class Lexer(object):
@@ -401,8 +363,8 @@ class Parser(object):
 		
 	def parse(self, tree=[]):
 
-		tree = self.lang.grammarTree
 
+		sentence = []
 
 		while True:
 			lexeme = self.lexer.next()
@@ -429,10 +391,14 @@ class Parser(object):
 				if isinstance(lexeme, self.lang.Keyword):
 					#tree.append(lexeme.handle(self.parse))
 					continue
+			# end of block --- catch preprocessor directives
 
-			if len(tree) == 0
+			#if isinstance()
+			
 
-			tree.push(lexeme.__repr__())
+			sentence.append(lexeme.__repr__())
+
+	
 
 			"""
 
@@ -462,7 +428,7 @@ class Parser(object):
 		return tree
 		"""
 
-		print tree.get()
+	
 
 
 			
