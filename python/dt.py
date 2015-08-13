@@ -1,35 +1,140 @@
 #!/usr/bin/python
 
 import StringIO, re
+from GrammarTree import *
 
 class Doubletalk(object):
 
-	class Lexeme(object):
-		def __init__(self, word, **kwargs):
-			self.word = word
+	class Program(object):
+		pass
 
-	class PreprocessorDirective(Lexeme):
+	class Block(object):
 		pass
-		
-	class CommentBlock(PreprocessorDirective):
+
+	class Expression(object):
+		pass
+
+	class Statement(object):
+		pass
+
+	class Lexeme(object):
+		def __init__(self, token, **kwargs):
+			self.token = token
+			self.set(kwargs)
+
+		def set(self, kwargs):
+			for i in kwargs:
+				setattr(self, i, kwargs[i])
+
+		def handle(self, parser, **kwargs):
+			pass
+
+	# white space
+	class WhiteSpace(Lexeme):
+		pass
+
+	class Space(WhiteSpace):
+		pass
+
+	class NewLine(WhiteSpace):
+		pass
+
+	class Tab(WhiteSpace):
+		pass
+
+	# block delimiters
+	class Delimiter(Lexeme):
+		pass
+
+	# constants
+	class Constant(Lexeme):
+		def __repr__(self):
+			return '<const>'
+
+	class String(Constant):
 		pass
 	
-	class CommentLine(PreprocessorDirective):
+	class Number(Constant):
 		pass
-	
-	class Identifier(Lexeme):
-		pass
-		
-	class String(Lexeme):
-		pass
-	
-	class Number(Lexeme):
-		pass
-	
+
+	# operators
 	class Operator(Lexeme):
+		def __repr__(self):
+			return '<op>'
+
+	class Assign(Operator):
+		pass
+
+	class Equal(Operator):
+		pass
+
+	class EqualStrict(Operator):
+		pass
+
+	class Subtract(Operator):
+		pass
+
+	class Add(Operator):
+		pass
+
+	class Increment(Operator):
+		pass
+
+	class Decrement(Operator):
+		pass
+
+	class Divide(Operator):
+		pass
+
+	class Multiply(Operator):
+		pass
+
+	# keywords
+	class Keyword(Lexeme):
+		pass
+
+	class Prnt(Keyword):
+		def __repr__(self):
+			return '<keyword>prnt'
+
+	class If(Keyword):
+		def __repr__(self):
+			return '<keyword>if'
+
+	class Then(Keyword):
+		def __repr__(self):
+			return '<keyword>then'
+
+	#preprocesor
+	class Preprocessor(Lexeme):
+		pass
+		
+	class CommentBlock(Preprocessor, Delimiter):
 		pass
 	
-	class Keyword(Lexeme):
+	class CommentLine(Preprocessor, Delimiter):
+		pass
+
+	class Include(Preprocessor, Keyword):
+		def handle(self, parser):
+			print parser()
+			return self
+		def __repr__(self):
+			return '<preprocessor><keyword>include'
+		
+	# identifiers
+	class Identifier(Lexeme):
+		def __repr__(self):
+			return '<ident>'
+
+	# entity
+	class GameObject(Lexeme):
+		pass
+
+	class Character(GameObject):
+		pass
+
+	class Ego(Character):
 		pass
 	
 	delimiters = "[.:!,;+*^&@#$%&'\"\-\\/\|=$()?<>\s]"
@@ -42,6 +147,9 @@ class Doubletalk(object):
 	r_equal 		= r'[=]'
 	r_plus 			= r'[+]'
 	r_dash 			= r'[-]'
+	r_hash 			= r'[#]'
+	r_exclamation 	= r'[!]'
+	r_question		= r'[?]'
 	r_number 		= r'^[0-9]+'
 	r_identifier 	= r'[_a-zA-Z][_a-zA-Z0-9]*'
 	r_atsign		= r'[@]'
@@ -49,46 +157,74 @@ class Doubletalk(object):
 	r_single_quote 	= r'[\']'
 	
 	symbols = {
-		r_space: 		'[space]',
-		r_newline:		'[newline]',
-		r_tab:			'[tab]',
-		r_double_quote: '[string]',
-		r_single_quote: '[string]',
+		r_space: 			lambda t: Doubletalk.Space(t),
+		r_newline:			lambda t: Doubletalk.NewLine(t),
+		r_tab:				lambda t: Doubletalk.Tab(t),
+		r_double_quote: 	lambda t: Doubletalk.String(t),
+		r_single_quote: 	lambda t: Doubletalk.String(t),
 		r_slash: {
-			r_asterisk:	lambda s: Doubletalk.CommentBlock(s, open=True),
-			r_slash: 	'[comment_line]',
-			None:		'[divide]'
+			r_asterisk:		lambda t: Doubletalk.CommentBlock(t, open=True),
+			r_slash: 		lambda t: Doubletalk.CommentLine(t),
+			None:			lambda t: Doubletalk.Divide(t)
 		},
 		r_asterisk: {
-			r_slash:	lambda s: Doubletalk.CommentBlock(s, open=False),
-			None:		'[multiply]'
+			r_slash:		lambda t: Doubletalk.CommentBlock(t, open=False),
+			None:			lambda t: Doubletalk.Multiply(t)
 		},
 		r_equal: {
 			r_equal: {
-				r_equal:	'[equal_strict]',
-				None:		'[equal]'
+				r_equal:	lambda t: Doubletalk.EqualStrict(t),
+				None:		lambda t: Doubletalk.Equal(t)
 			},
-			None: 			'[assign]'
+			None: 			lambda t: Doubletalk.Assign(t)
 		},
 		r_plus: {
-			r_plus:	'[increment]',
-			None:	'[add]'
+			r_plus:			lambda t: Doubletalk.Increment(t),
+			None:			lambda t: Doubletalk.Add(t)
 		},
 		r_dash: {
-			r_dash:		'[decrement]',
-			None:		'[subtract]'
+			r_dash:			lambda t: Doubletalk.Decrement(t),
+			None:			lambda t: Doubletalk.Subtract(t)
 		},
-		r_number: 			'[number]',
-		r_identifier:		lambda i: Doubletalk.Identifier(i),
+		r_number: 			lambda t: Doubletalk.Number(t),
+		r_identifier:		lambda t: Doubletalk.keywords[t.word](t) if t.word in Doubletalk.keywords else Doubletalk.Identifier(t),
 		r_atsign: {
-			r_identifier:	'[character]',
-			None: '[ego]'
+			r_identifier:	lambda t: Doubletalk.Character(t),
+			None: 			lambda t: Doubletalk.Ego(t)
 		}
 	}
 
+	keywords = {
+		'prnt':		lambda t: Doubletalk.Prnt(t),
+		'if':		lambda t: Doubletalk.If(t),
+		'then':		lambda t: Doubletalk.Then(t),
+		'include':	lambda t: Doubletalk.Include(t)
+	}
+
+	grammar = {
+		'<const>': {
+			'<op>': lambda: Doubletalk.grammar
+		},
+		'<ident>': {
+			'<op>':	lambda: Doubletalk.grammar,
+		}
+	}
+
+	grammarTree = GrammarTree(grammar)
+
 	
 class Lexer(object):
-	
+
+	class Token(object):
+		def __init__(self, line, char, word, func=None):
+			self.line = line
+			self.char = char
+			self.word = word
+			self.func = func
+
+		def __repr__(self):
+			return "Token(line=(%s)%s, char=(%s)%s, word=(%s)'%s'" % (type(self.line), self.line, type(self.char), self.char, type(self.word), self.word)
+
 	def __init__(self, syntax, source, is_file=True):
 		self.src	= open(source) if is_file else StringIO.StringIO(source)
 		self.syntax	= syntax
@@ -115,6 +251,8 @@ class Lexer(object):
 				# EOF
 				self.src.close()
 				break
+			else:
+				char = char.lower()
 			
 			c = re.match(self.syntax.delimiters, char)
 			
@@ -139,11 +277,9 @@ class Lexer(object):
 			self.nline = self.nline + 1
 		else:
 			self.nchar 	= self.nchar + 1
-			
-		token 		= ''.join(self.token)
-		info 		= '%s:%s' % (self.nline,self.nchar)
-				
-		return (info,token) if len(token) > 0 else (info,None)
+
+		return self.Token(self.nline, self.nchar, ''.join(self.token)) if len(self.token) > 0 else None
+		
 
 	def next(self):
 	
@@ -152,10 +288,11 @@ class Lexer(object):
 		
 		while True:
 			# get next symbol
-			info,symbol = self.scan()
+			token = self.scan()
+			#info,symbol = self.scan()
 
 			# EOF				
-			if symbol is None:
+			if token is None:
 				return False
 							
 			# search in syntax tree
@@ -164,11 +301,11 @@ class Lexer(object):
 				if regexp is None:
 					continue
 
-				if re.match(regexp, symbol):
-					word.append(symbol)
+				if re.match(regexp, token.word):
+					word.append(token.word)
 					# move forward in tree
 					tree = tree[regexp]
-					match = symbol
+					match = token.word
 					break
 	
 			if match is not None:
@@ -183,56 +320,125 @@ class Lexer(object):
 				tree = self.syntax.symbols
 				continue
 
-			return (info,''.join(word), tree)
+			token.word = ''.join(word)
+
+			return tree(token)
 		
 class Parser(object):
-	
+
 	def __init__(self, lang, source, is_file=True):
 		self.lang	= lang
 		self.lexer 	= Lexer(lang, source, is_file)
 		self.tree 	= []
-		
-	def verbatim(self, stop):
+
+	def verbatim(self, stop, **kwargs):
 		verbatim = []
+
 		while True:
-			symbol = self.lexer.next()
-			
-			# stop capturing verbatim on stop character
-			# or EOF
-			if not symbol or symbol[1] == stop or symbol[1] is None:
-				break
-			else:
-				verbatim.append(symbol[1])
-			
-		return verbatim
-	
-	def statement(self, token):
-		term = token[2](token[0])
-		print isinstance(term, self.lang.Identifier)
+			lexeme = self.lexer.next()
 		
-	def parse(self):
-		while True:
-			n = self.lexer.next()
-			if n is False:
+			# EOF
+			if not lexeme or lexeme is None:
 				break
+
+			# is lexeme the stop token?
+			if isinstance(lexeme, stop):
+				found = True
+				# has lexeme the properties we are looking for?
+				for p in kwargs:
+					# it doesn't
+					if not p in lexeme.__dict__:
+						found = False	
+					# has property but different value?
+					elif kwargs[p] != lexeme.__dict__[p]:
+						found = False
+						# reject lexeme as the stop mark
+						break
+				if found:
+					return verbatim
+			else:
+				verbatim.append(lexeme.token.word)
+
+		return False
+		
+	def parse(self, tree=[]):
+
+
+		sentence = []
+
+		while True:
+			lexeme = self.lexer.next()
+			if lexeme is False:
+				break
+
+			if isinstance(lexeme, self.lang.WhiteSpace):
+				continue
+
+			# catch preprocessor directives
+			if isinstance(lexeme, self.lang.Preprocessor):
+
+				if isinstance(lexeme, self.lang.CommentBlock):
+					if not self.verbatim(self.lang.CommentBlock, open=False):
+						raise Exception('Comment block missing closure')
+					else:
+						continue
+
+				if isinstance(lexeme, self.lang.CommentLine):
+					self.verbatim(self.lang.NewLine)
+					continue
+
+				# catch variables, functions, keywords
+				if isinstance(lexeme, self.lang.Keyword):
+					#tree.append(lexeme.handle(self.parse))
+					continue
+			# end of block --- catch preprocessor directives
+
+			#if isinstance()
 			
-			# fast forward through comment blocks
-			if n[2] == '[comment_block_open]':
-				self.verbatim('*/')
-			elif n[2] == '[comment_line]':
-				self.verbatim('\n')
-			elif n[2] == '[newline]':
-				pass
-			elif n[2] == '[space]':
-				pass
-			elif n[2] == '[tab]':
-				pass
-			elif n[2] == '[keyword]':
-				pass
-			else:	
-				self.statement(n)
+
+			sentence.append(lexeme.__repr__())
+
+	
+
+			"""
+
+			t = lexeme.__repr__()
+
+			if isinstance(legal, list):
+				legal = legal.pop(0)
+				
+			if callable(legal):
+				legal = legal()
+			
+			if t in legal:
+				if callable(t):
+					legal = legal[t]()
+				else:
+					legal = legal[t]
+				
+				tree.append(lexeme)
+
+			else:
+				print 'Illegal: %s' % (lexeme)
+				print legal
+				break
+			"""
+		"""
+		print '-' * 80
+		return tree
+		"""
+
+	
+
+
+			
+
+			
 			
 			
 			
 lex = Parser(Doubletalk(), 'test.dtk')
-lex.parse()
+tree = lex.parse()
+
+#print tree
+

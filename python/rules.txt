@@ -1,0 +1,4 @@
+$	>>	<expr>
+$	>>	if	>> <expr> >> then >> <sentence> << end
+$	>>	prnt <expr>
+
