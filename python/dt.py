@@ -365,7 +365,7 @@ class Parser(object):
 	def parse(self, tree=[]):
 
 		legal = self.lang.grammar;
-		sentences = []
+		instr = []
 
 		while True:
 			lexeme = self.lexer.next()
@@ -394,11 +394,16 @@ class Parser(object):
 					continue
 			# end of block --- catch preprocessor directives
 
+			sentence =  instr.pop() if len(sentence) > 0 else Sentence() 
 			
+			l = lexeme.__repr__()
 
-			#sentence = (len(sentence) == 0) ? Sentence() : sentences.pop()
-
-			print lexeme.__repr__() in self.lang.grammar
+			if lexeme.__repr__() in legal:
+				legal = legal[t]
+				
+				sentence.push(lexeme)
+				
+				
 
 
 			"""
