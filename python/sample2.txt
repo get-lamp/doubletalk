@@ -1,0 +1,5 @@
+blown FROM [@]				--> returns @ having property blown == TRUE
+{expression} AS identifier 	--> assigns expression retrn to identifier
+EXPECT {block} 				--> returns TRUE if ALL statements are TRUE
+WHICHEVER {block}			--> returns TRUE if ANY statements are TRUE
+FAILSAFE {block}			--> executes if stack value is FALSE
