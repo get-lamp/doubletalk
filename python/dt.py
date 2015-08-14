@@ -33,6 +33,9 @@ class Doubletalk(object):
 	# block delimiters
 	class Delimiter(Lexeme):
 		pass
+	
+	class End(Keyword, Delimiter):
+		pass
 
 	# constants
 	class Constant(Lexeme):
@@ -192,6 +195,7 @@ class Doubletalk(object):
 		'prnt':		lambda t: Doubletalk.Prnt(t),
 		'if':		lambda t: Doubletalk.If(t),
 		'then':		lambda t: Doubletalk.Then(t),
+		'end':		lambda t: DOubletalk.End(t),
 		'include':	lambda t: Doubletalk.Include(t)
 	}
 
@@ -393,8 +397,11 @@ class Parser(object):
 
 			sentence = (len(sentence) == 0) ? Sentence() : sentences.pop()
 
-			if isinstance(lexeme, self.lang.ident) or isinstance(lexeme, self.lang.ident):
+			if isinstance(lexeme, self.lang.Identifier) or isinstance(lexeme, self.lang.Identifier):
 				sentence.push(lexeme)
+				
+			if isinstance(lexeme, self.lang.Keyword):
+				pass
 
 
 			"""
