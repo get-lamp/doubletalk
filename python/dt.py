@@ -1,59 +1,9 @@
 #!/usr/bin/python
 
 import StringIO, re
-
-class SyntaxTree(object):
-	def __init__(self, syntax={}):
-		self.syntax 	= syntax
-		self.route 		= [self.syntax]
-		self.sentence 	= [] 
-
-	def _up(self):
-		pass
-
-	def _down(self):
-		pass
-
-	def hint(self):
-		pass
-
-	def push(self, word):
-		print word
-		branch = self.route[-1]
-
-		if word in branch:
-			self.sentence.append(word)
-				
-			if callable(branch[word]):
-				branch[word] = branch[word]()
-
-			self.route.append(branch[word])
-
-	def last(self):
-		pass
-
-	def get(self):
-		return self.sentence;
-
-	def __len__(self):
-		return len(sentence)
-
-	def clear(self):
-		pass
+from GrammarTree import *
 
 class Doubletalk(object):
-
-	class Program(object):
-		pass
-
-	class Block(object):
-		pass
-
-	class Expression(object):
-		pass
-
-	class Statement(object):
-		pass
 
 	class Lexeme(object):
 		def __init__(self, token, **kwargs):
@@ -89,6 +39,9 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<const>'
 
+		def __str__(self):
+			return "<%s:%s const %s>" % (self.token.line, self.token.char, self.token.word)
+
 	class String(Constant):
 		pass
 	
@@ -99,6 +52,9 @@ class Doubletalk(object):
 	class Operator(Lexeme):
 		def __repr__(self):
 			return '<op>'
+
+		def __str__(self):
+			return "<%s:%s op %s>" % (self.token.line, self.token.char, self.token.word)
 
 	class Assign(Operator):
 		pass
@@ -248,8 +204,6 @@ class Doubletalk(object):
 		}
 	}
 
-	grammarTree = SyntaxTree(grammar)
-
 	
 class Lexer(object):
 
@@ -364,6 +318,12 @@ class Lexer(object):
 		
 class Parser(object):
 
+	class Expression(object):
+		pass
+
+	class Statement(object):
+		pass
+
 	def __init__(self, lang, source, is_file=True):
 		self.lang	= lang
 		self.lexer 	= Lexer(lang, source, is_file)
@@ -401,8 +361,8 @@ class Parser(object):
 		
 	def parse(self, tree=[]):
 
-		tree = self.lang.grammarTree
-
+		legal = self.lang.grammar;
+		sentences = []
 
 		while True:
 			lexeme = self.lexer.next()
@@ -429,14 +389,18 @@ class Parser(object):
 				if isinstance(lexeme, self.lang.Keyword):
 					#tree.append(lexeme.handle(self.parse))
 					continue
+			# end of block --- catch preprocessor directives
 
-			if len(tree) == 0
+			sentence = (len(sentence) == 0) ? Sentence() : sentences.pop()
 
-			tree.push(lexeme.__repr__())
+			if isinstance(lexeme, self.lang.ident) or isinstance(lexeme, self.lang.ident):
+				sentence.push(lexeme)
+
 
 			"""
-
 			t = lexeme.__repr__()
+
+			print t
 
 			if isinstance(legal, list):
 				legal = legal.pop(0)
@@ -453,22 +417,10 @@ class Parser(object):
 				tree.append(lexeme)
 
 			else:
-				print 'Illegal: %s' % (lexeme)
-				print legal
+				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
 				break
 			"""
-		"""
-		print '-' * 80
-		return tree
-		"""
-
-		print tree.get()
-
-
-			
-
-			
-			
+		
 			
 			
 lex = Parser(Doubletalk(), 'test.dtk')

@@ -1,0 +1,15 @@
+$->intro
+$->silence
+silence->intro
+intro->verse
+intro->chorus
+verse->chorus
+verse->solo
+verse->fade
+chorus->verse
+chorus->chorus
+chorus->solo
+chorus->fade
+solo->chorus
+solo->verse
+solo->fade
