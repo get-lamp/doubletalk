@@ -30,13 +30,6 @@ class Doubletalk(object):
 	class Tab(WhiteSpace):
 		pass
 
-	# block delimiters
-	class Delimiter(Lexeme):
-		pass
-	
-	class End(Keyword, Delimiter):
-		pass
-
 	# constants
 	class Constant(Lexeme):
 		def __repr__(self):
@@ -88,19 +81,28 @@ class Doubletalk(object):
 
 	# keywords
 	class Keyword(Lexeme):
+		def __repr__(self):
+			return '<keyword>'
+
+	# block delimiters
+	class Delimiter(Lexeme):
+		pass
+	
+	class End(Keyword, Delimiter):
 		pass
 
+	# keywords
 	class Prnt(Keyword):
-		def __repr__(self):
-			return '<keyword>prnt'
+		def __str__(self):
+			return 'prnt'
 
 	class If(Keyword):
-		def __repr__(self):
-			return '<keyword>if'
+		def __str__(self):
+			return 'if'
 
 	class Then(Keyword):
-		def __repr__(self):
-			return '<keyword>then'
+		def __str__(self):
+			return 'then'
 
 	#preprocesor
 	class Preprocessor(Lexeme):
@@ -195,17 +197,14 @@ class Doubletalk(object):
 		'prnt':		lambda t: Doubletalk.Prnt(t),
 		'if':		lambda t: Doubletalk.If(t),
 		'then':		lambda t: Doubletalk.Then(t),
-		'end':		lambda t: DOubletalk.End(t),
+		'end':		lambda t: Doubletalk.End(t),
 		'include':	lambda t: Doubletalk.Include(t)
 	}
 
 	grammar = {
-		'<const>': {
-			'<op>': lambda: Doubletalk.grammar
-		},
-		'<ident>': {
-			'<op>':	lambda: Doubletalk.grammar,
-		}
+		'<const>': ['<op>'],
+		'<ident>': ['<op>'],
+		'<keyword>': []
 	}
 
 	
@@ -395,13 +394,11 @@ class Parser(object):
 					continue
 			# end of block --- catch preprocessor directives
 
-			sentence = (len(sentence) == 0) ? Sentence() : sentences.pop()
+			
 
-			if isinstance(lexeme, self.lang.Identifier) or isinstance(lexeme, self.lang.Identifier):
-				sentence.push(lexeme)
-				
-			if isinstance(lexeme, self.lang.Keyword):
-				pass
+			#sentence = (len(sentence) == 0) ? Sentence() : sentences.pop()
+
+			print lexeme.__repr__() in self.lang.grammar
 
 
 			"""
@@ -427,6 +424,20 @@ class Parser(object):
 				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
 				break
 			"""
+
+			"""
+			if isinstance(lexeme, self.lang.Keyword):
+				pass
+
+			# catch keywords
+			if isinstance(lexeme, self.lang.Identifier) or isinstance(lexeme, self.lang.Identifier):
+				sentence.push(lexeme)
+			"""
+
+		print tree				
+			
+
+
 		
 			
 			
