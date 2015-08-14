@@ -1,5 +1,36 @@
-blown FROM [@]				--> returns @ having property blown == TRUE
-{expression} AS identifier 	--> assigns expression retrn to identifier
-EXPECT {block} 				--> returns TRUE if ALL statements are TRUE
-WHICHEVER {block}			--> returns TRUE if ANY statements are TRUE
-FAILSAFE {block}			--> executes if stack value is FALSE
+OP Rendezvous
+
+TO [@Karl, @Guillam]
+CLEARANCE None
+
+DEFINE setup
+	Mitte >> Hengelsplatz Cafe AS redezvous
+	Mitte >> Post Office > AS dead-drop
+END
+
+PROCEDURE counter-surveillance
+
+	TRAVEL RANDOM [Bradenburg, Metro, Autobahn] UNTIL NOT FOLLOWED
+	GO Post office
+
+	GO Mitte >> Hengelsplatz BY cab
+	GO Post Office BY walk
+	WAIT UNTIL t+00:10
+	ASSERT NOT FOLLOWED
+	FAILSAFE
+		GO Post office
+		END
+	SIGNAL dead-drop
+	GO HOME
+END
+
+BEGIN July 18 1955 10:15
+
+	PROCEDE counter-surveillance
+	GO Hengelsplatz BY cab
+	WAIT @John UNTIL 11:30
+	FAILSAFE
+		GO Cafe
+		TRANSMIT DEBRIEF
+		END
+END
