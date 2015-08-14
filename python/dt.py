@@ -362,7 +362,7 @@ class Parser(object):
 	def parse(self, tree=[]):
 
 		legal = self.lang.grammar;
-		sentence = []
+		sentences = []
 
 		while True:
 			lexeme = self.lexer.next()
@@ -391,6 +391,13 @@ class Parser(object):
 					continue
 			# end of block --- catch preprocessor directives
 
+			sentence = (len(sentence) == 0) ? Sentence() : sentences.pop()
+
+			if isinstance(lexeme, self.lang.ident) or isinstance(lexeme, self.lang.ident):
+				sentence.push(lexeme)
+
+
+			"""
 			t = lexeme.__repr__()
 
 			print t
@@ -412,6 +419,7 @@ class Parser(object):
 			else:
 				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
 				break
+			"""
 		
 			
 			
