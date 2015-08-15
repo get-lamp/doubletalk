@@ -135,6 +135,37 @@ class Doubletalk(object):
 
 	class Ego(Character):
 		pass
+
+	keywords = {
+		'prnt':		lambda t: Doubletalk.Prnt(t),
+		'if':		lambda t: Doubletalk.If(t),
+		'then':		lambda t: Doubletalk.Then(t),
+		'end':		lambda t: Doubletalk.End(t),
+		'include':	lambda t: Doubletalk.Include(t)
+	}
+
+	expression = {
+		r'<const>|<ident>': {
+			'<op>': lambda: Doubletalk.expression
+		}
+	}
+
+	class Statement(object):
+		pass
+
+	class Expression(list):
+		def __init__(self):
+			self.grammar = Doubletalk.expression
+			super(Doubletalk.Expression, self).__init__()
+
+		def append(self, i):
+
+			for r in self.grammar:
+				if re.match(r, i.__repr__()):
+					self.grammar = self.grammar[r] if not callable(self.grammar[r]) else self.grammar[r]()
+					return super(Doubletalk.Expression, self).append(i)
+			
+			raise Exception('Unexpected token "%s" in line %s, char %s.' % (i.token.word, i.token.line, i.token.char))
 	
 	delimiters = "[.:!,;+*^&@#$%&'\"\-\\/\|=$()?<>\s]"
 	
@@ -193,19 +224,7 @@ class Doubletalk(object):
 		}
 	}
 
-	keywords = {
-		'prnt':		lambda t: Doubletalk.Prnt(t),
-		'if':		lambda t: Doubletalk.If(t),
-		'then':		lambda t: Doubletalk.Then(t),
-		'end':		lambda t: Doubletalk.End(t),
-		'include':	lambda t: Doubletalk.Include(t)
-	}
-
-	grammar = {
-		'<const>': ['<op>'],
-		'<ident>': ['<op>'],
-		'<keyword>': []
-	}
+	
 
 	
 class Lexer(object):
@@ -229,6 +248,10 @@ class Lexer(object):
 
 	def __exit__(self):
 		self.src.close()
+
+	def backtrack(self, n=1):
+		self.src.seek(-n, 1)
+		return self
 		
 	def scan(self):
 	
@@ -262,7 +285,7 @@ class Lexer(object):
 				# a multichar token to return. 
 				# backtrack 1 to leave pointer in position for next reading
 				else:
-					self.src.seek(-1, 1)
+					self.backtrack(1)
 					break
 		
 		# char is newline
@@ -294,6 +317,7 @@ class Lexer(object):
 			for regexp in tree:
 				match = None
 				if regexp is None:
+					self.backtrack(1)
 					continue
 
 				if re.match(regexp, token.word):
@@ -320,12 +344,6 @@ class Lexer(object):
 			return tree(token)
 		
 class Parser(object):
-
-	class Expression(object):
-		pass
-
-	class Statement(object):
-		pass
 
 	def __init__(self, lang, source, is_file=True):
 		self.lang	= lang
@@ -364,8 +382,8 @@ class Parser(object):
 		
 	def parse(self, tree=[]):
 
-		legal = self.lang.grammar;
-		instr = []
+		sentence 	= Doubletalk.Sentence()
+		expression 	= Doubletalk.Expression()
 
 		while True:
 			lexeme = self.lexer.next()
@@ -394,15 +412,17 @@ class Parser(object):
 					continue
 			# end of block --- catch preprocessor directives
 
-			sentence =  instr.pop() if len(sentence) > 0 else Sentence() 
+			sentence.append(expression.append(lexeme))
 			
+			"""
 			l = lexeme.__repr__()
 
 			if lexeme.__repr__() in legal:
-				legal = legal[t]
-				
-				sentence.push(lexeme)
-				
+				sentence.append(lexeme)
+			else:
+				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
+				break
+			"""
 				
 
 
@@ -439,7 +459,9 @@ class Parser(object):
 				sentence.push(lexeme)
 			"""
 
-		print tree				
+		print '----------------------------'
+		for s in expression:
+			print s.token.word, s.__repr__() 				
 			
 
 
