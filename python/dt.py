@@ -149,9 +149,37 @@ class Doubletalk(object):
 			'<op>': lambda: Doubletalk.expression
 		}
 	}
+	
+	statement = {
+		r'<expr>': {
+			'<op>': lambda: Doubletalk.expression
+		},
+		r'<keyword>': {
+			r'<expr>': {
+				r'<then>': {
+					r'<statement>': lambda: Doubletalk.expression[r'<keyword>'][r'<expr>'][r'<then>'],
+					r'<end>': lambda: Doubletalk.expression
+				}
+			}
+		}
+	}
 
-	class Statement(object):
-		pass
+	class Statement(list):
+		def __init__(self):
+			self.grammar = Doubletalk.statement
+			super(Doubletalk.Statement, self).__init__()
+		
+		def append(self, i):
+			for r in self.grammar:
+				if re.match(r, i.__repr__()):
+					self.grammar = self.grammar[r] if not callable(self.grammar[r]) else self.grammar[r]()
+					super(Doubletalk.Statement, self).append(i)
+					return self
+			
+			raise Exception('Unexpected %s' % (i))
+			
+		def __expr__(self):
+			return '<statement>'
 
 	class Expression(list):
 		def __init__(self):
@@ -159,13 +187,16 @@ class Doubletalk(object):
 			super(Doubletalk.Expression, self).__init__()
 
 		def append(self, i):
-
 			for r in self.grammar:
 				if re.match(r, i.__repr__()):
 					self.grammar = self.grammar[r] if not callable(self.grammar[r]) else self.grammar[r]()
-					return super(Doubletalk.Expression, self).append(i)
+					super(Doubletalk.Expression, self).append(i)
+					return self
 			
 			raise Exception('Unexpected token "%s" in line %s, char %s.' % (i.token.word, i.token.line, i.token.char))
+		
+		def __expr__(self):
+			return '<expr>'
 	
 	delimiters = "[.:!,;+*^&@#$%&'\"\-\\/\|=$()?<>\s]"
 	
@@ -382,7 +413,7 @@ class Parser(object):
 		
 	def parse(self, tree=[]):
 
-		sentence 	= Doubletalk.Sentence()
+		statement 	= Doubletalk.Statement()
 		expression 	= Doubletalk.Expression()
 
 		while True:
@@ -412,7 +443,7 @@ class Parser(object):
 					continue
 			# end of block --- catch preprocessor directives
 
-			sentence.append(expression.append(lexeme))
+			statement.append(expression.append(lexeme))
 			
 			"""
 			l = lexeme.__repr__()
@@ -460,8 +491,8 @@ class Parser(object):
 			"""
 
 		print '----------------------------'
-		for s in expression:
-			print s.token.word, s.__repr__() 				
+		for s in statement:
+			print s #.token.word, s.__repr__() 				
 			
 
 
