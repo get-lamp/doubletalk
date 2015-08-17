@@ -126,6 +126,7 @@ class Doubletalk(object):
 
 			print 'code pass here'
 			then = parser.then()
+			
 
 			return [condition, block, then]
 
@@ -189,6 +190,13 @@ class Doubletalk(object):
 		'end':		lambda t: Doubletalk.End(t),
 		'include':	lambda t: Doubletalk.Include(t)
 	}
+	
+	block = {
+		r'<statement>': {
+			r'<statement>': lambda: Doubletalk.block,
+			r'<end>': None
+		}
+	}
 
 	expression = {
 		r'<const>|<ident>': {
@@ -197,9 +205,6 @@ class Doubletalk(object):
 	}
 	
 	statement = {
-		r'<const>|<ident>': {
-			'<op>': lambda: Doubletalk.expression
-		},
 		r'<if>': {
 			r'<expr>': {
 				r'<then>': {
@@ -213,6 +218,31 @@ class Doubletalk(object):
 			}
 		}
 	}
+	
+	class Block(list):
+		def __init__(self):
+			self.grammar = Doubletalk.block
+			super(Doubletalk.Block, self).__init__()
+		
+		def is_legal(self, i):
+	
+			for r in self.grammar:
+						
+				if re.match(r, i.lextype()):
+					return r
+					
+			return False
+
+		def push(self, i):
+
+			l = self.is_legal(i)
+			if l:
+				self.grammar = self.grammar[l] if not callable(self.grammar[l]) else self.grammar[l]()
+				super(Doubletalk.Block, self).append(i)	
+				return self					
+		
+			return False
+			
 
 	class Statement(list):
 		def __init__(self):
@@ -220,18 +250,12 @@ class Doubletalk(object):
 			super(Doubletalk.Statement, self).__init__()
 		
 		def is_legal(self, i):
-			print 'Evaluating: %s' % (i)
+	
 			for r in self.grammar:
-				print 'Against: %s' % (r)
-				
-				#print r, self.grammar, re.match(r, i.lextype()) 
-				
+						
 				if re.match(r, i.lextype()):
-					print 'Match: %s' % (r)
-					print '-' * 80
 					return r
-
-			print '-' * 80
+					
 			return False
 
 		def push(self, i):
@@ -241,7 +265,7 @@ class Doubletalk(object):
 				self.grammar = self.grammar[l] if not callable(self.grammar[l]) else self.grammar[l]()
 				super(Doubletalk.Statement, self).append(i)	
 				return self					
-			
+		
 			return False
 	
 	class Expression(list):
@@ -487,7 +511,8 @@ class Parser(object):
 		expr = Doubletalk.Expression()
 
 		while True:
-			term = self.lexer.next()
+			term = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()	
+			
 			if term is False:
 				break
 
@@ -495,6 +520,7 @@ class Parser(object):
 				continue
 
 			if not expr.push(term):
+				self.pending.append(term)
 				break
 
 		return expr
@@ -514,37 +540,24 @@ class Parser(object):
 
 			if not statement.push(term):
 				self.pending.append(term)
-				#print 'Rejected: %s' % (term)
 				break
 
 		return statement
 
 	def then(self):
 		term =  self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
-		print 'niak'
 		print term
 		return term
+	
+	def block(self):
+		pass
 		
 	def parse(self):
 
-		statement = []
-
-		while True:
-			s = self.statement()
-			if len(s) > 0:
-				statement.append(s)
-			else:
-				break
-
-		return statement
-
-
-
-		"""
 		try: 
 
 			while True:
-				lexeme = self.lexer.next()
+				lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
 				if lexeme is False:
 					break
 
@@ -554,6 +567,7 @@ class Parser(object):
 				if isinstance(lexeme, self.lang.WhiteSpace):
 					continue
 
+				"""
 				# catch preprocessor directives
 				if isinstance(lexeme, self.lang.Preprocessor):
 
@@ -572,21 +586,30 @@ class Parser(object):
 						#tree.append(lexeme.process(self.parse))
 						continue
 				# end of block --- catch preprocessor directives
+				"""
+				
+				print lexeme
+				
+				if isinstance(lexeme, self.lang.Keyword):
 
-				if isinstance(lexeme, self.lang.Keyword) and len(statement) == 0:
 					statement = lexeme.process(self, keyword=lexeme)
+					break
 				elif isinstance(lexeme, (self.lang.Identifier, self.lang.Constant)):
-					pass
+					self.pending.append(lexeme)
+					statement = self.expression()
+					break
 				else:
 					print 'Unexpected token "%s" in line %s, char %s.' % (lexeme.token.word, lexeme.token.line, lexeme.token.char)
-				
+					
 		
 		except Exception as e:
 			print e
 			print '----------------------------'
 			print statement
 			exit(1)
-		"""
+		
+		return statement
+	
 		
 		"""
 		l = lexeme.__repr__()
@@ -643,9 +666,11 @@ class Terminal:
 
 			if ch == 'q':
 				break
+				
+			instr = self.parser.parse()
 
 			print '-' * 80
-			print 'Instr: %s' % (self.parser.parse())
+			print 'Instr: (%s) %s' % (type(instr), instr)
 			
 
 	def getchar(self):
