@@ -2,6 +2,7 @@
 
 import StringIO, re
 from GrammarTree import *
+import tty, termios, sys
 
 class Doubletalk(object):
 
@@ -36,7 +37,7 @@ class Doubletalk(object):
 			return '<const>'
 
 		def __repr__(self):
-			return '<const>'
+			return '<const %s>' % (self.token.word)
 
 	class String(Constant):
 		pass
@@ -50,7 +51,7 @@ class Doubletalk(object):
 			return '<op>'
 
 		def __repr__(self):
-			return '<op>'
+			return '<op %s>' % (self.token.word)
 
 	class Assign(Operator):
 		pass
@@ -83,6 +84,8 @@ class Doubletalk(object):
 	class Keyword(Lexeme):
 		def lextype(self):
 			return '<keyword>'
+		def __repr__(self):
+			return '<keyword %s>' % (self.token.word)
 
 	# block delimiters
 	class Delimiter(Lexeme):
@@ -112,19 +115,38 @@ class Doubletalk(object):
 
 		def process(self, parser, **kwargs):
 			condition = parser.expression()
-			statement = parser.statement()
-			return [condition, [statement]]
+			statement = None
+			block = []
+			while True:
+				statement = parser.statement()
+				if len(statement) > 0:
+					block.append(statement)
+				else:
+					break
+
+			print 'code pass here'
+			then = parser.then()
+
+			return [condition, block, then]
 
 		def __repr__(self):
 			return '<if>'
 
-	class Then(Keyword):
+	class Then(Keyword, Delimiter):
 		
 		def lextype(self):
 			return '<then>'
 
 		def __repr__(self):
 			return '<then>'
+
+	class Else(Keyword, Delimiter):
+		
+		def lextype(self):
+			return '<else>'
+
+		def __repr__(self):
+			return '<else>'
 
 	#preprocesor
 	class Preprocessor(Lexeme):
@@ -138,8 +160,7 @@ class Doubletalk(object):
 
 	class Include(Preprocessor, Keyword):
 		def process(self, parser):
-			print parser()
-			return self
+			pass
 		def lextype(self):
 			return '<preprocessor><keyword>include'
 		
@@ -148,7 +169,7 @@ class Doubletalk(object):
 		def lextype(self):
 			return '<ident>'
 		def __repr__(self):
-			return '<ident>'
+			return '<ident %s>' % (self.token.word)
 
 	# entity
 	class GameObject(Lexeme):
@@ -164,6 +185,7 @@ class Doubletalk(object):
 		'prnt':		lambda t: Doubletalk.Prnt(t),
 		'if':		lambda t: Doubletalk.If(t),
 		'then':		lambda t: Doubletalk.Then(t),
+		'else':		lambda t: Doubletalk.Else(t),
 		'end':		lambda t: Doubletalk.End(t),
 		'include':	lambda t: Doubletalk.Include(t)
 	}
@@ -181,8 +203,12 @@ class Doubletalk(object):
 		r'<if>': {
 			r'<expr>': {
 				r'<then>': {
-					r'<statement>': lambda: Doubletalk.expression[r'<keyword>'][r'<expr>'][r'<then>'],
-					r'<end>': lambda: Doubletalk.expression
+					r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expr>'][r'<then>'],
+					r'<else>': {
+						r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expr>'][r'<then>'][r'<else>'],
+						r'<end>': lambda: Doubletalk.statement
+					},
+					r'<end>': lambda: Doubletalk.statement
 				}
 			}
 		}
@@ -194,9 +220,18 @@ class Doubletalk(object):
 			super(Doubletalk.Statement, self).__init__()
 		
 		def is_legal(self, i):
+			print 'Evaluating: %s' % (i)
 			for r in self.grammar:
+				print 'Against: %s' % (r)
+				
+				#print r, self.grammar, re.match(r, i.lextype()) 
+				
 				if re.match(r, i.lextype()):
+					print 'Match: %s' % (r)
+					print '-' * 80
 					return r
+
+			print '-' * 80
 			return False
 
 		def push(self, i):
@@ -208,10 +243,7 @@ class Doubletalk(object):
 				return self					
 			
 			return False
-
-		def __str__(self):
-			return super(Doubletalk.Statement, self).__str__()
-			
+	
 	class Expression(list):
 		def __init__(self):
 			self.grammar = Doubletalk.expression
@@ -232,9 +264,6 @@ class Doubletalk(object):
 			
 			return False
 			#raise Exception('Unexpected token "%s" in line %s, char %s.' % (i.token.word, i.token.line, i.token.char))
-
-		def __str__(self):
-			return super(Doubletalk.Expression, self).__str__()
 
 		def lextype(self):
 			return '<expr>'
@@ -422,6 +451,7 @@ class Parser(object):
 		self.lang	= lang
 		self.lexer 	= Lexer(lang, source, is_file)
 		self.tree 	= []
+		self.pending = []
 
 	def verbatim(self, stop, **kwargs):
 		verbatim = []
@@ -474,25 +504,51 @@ class Parser(object):
 		statement = Doubletalk.Statement()
 
 		while True:
-			term = self.lexer.next()
-			if term is False:
+			term =  self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
+			
+			if term is False or isinstance(term, self.lang.NewLine):
 				break
 
 			if isinstance(term, self.lang.WhiteSpace):
 				continue
 
 			if not statement.push(term):
+				self.pending.append(term)
+				#print 'Rejected: %s' % (term)
 				break
 
 		return statement
-		
-	def parse(self, statement=Doubletalk.Statement()):
 
+	def then(self):
+		term =  self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
+		print 'niak'
+		print term
+		return term
+		
+	def parse(self):
+
+		statement = []
+
+		while True:
+			s = self.statement()
+			if len(s) > 0:
+				statement.append(s)
+			else:
+				break
+
+		return statement
+
+
+
+		"""
 		try: 
 
 			while True:
 				lexeme = self.lexer.next()
 				if lexeme is False:
+					break
+
+				if isinstance(lexeme, self.lang.NewLine):
 					break
 
 				if isinstance(lexeme, self.lang.WhiteSpace):
@@ -522,7 +578,7 @@ class Parser(object):
 				elif isinstance(lexeme, (self.lang.Identifier, self.lang.Constant)):
 					pass
 				else:
-					print 'Syntax error. Unexpected: %s' % (lexeme)
+					print 'Unexpected token "%s" in line %s, char %s.' % (lexeme.token.word, lexeme.token.line, lexeme.token.char)
 				
 		
 		except Exception as e:
@@ -530,62 +586,85 @@ class Parser(object):
 			print '----------------------------'
 			print statement
 			exit(1)
-			
-			"""
-			l = lexeme.__repr__()
+		"""
+		
+		"""
+		l = lexeme.__repr__()
 
-			if lexeme.__repr__() in legal:
-				sentence.append(lexeme)
+		if lexeme.__repr__() in legal:
+			sentence.append(lexeme)
+		else:
+			print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
+			break
+		"""
+			
+
+
+		"""
+		t = lexeme.__repr__()
+
+		print t
+
+		if isinstance(legal, list):
+			legal = legal.pop(0)
+			
+		if callable(legal):
+			legal = legal()
+		
+		if t in legal:
+			if callable(t):
+				legal = legal[t]()
 			else:
-				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
-				break
-			"""
-				
-
-
-			"""
-			t = lexeme.__repr__()
-
-			print t
-
-			if isinstance(legal, list):
-				legal = legal.pop(0)
-				
-			if callable(legal):
-				legal = legal()
+				legal = legal[t]
 			
-			if t in legal:
-				if callable(t):
-					legal = legal[t]()
-				else:
-					legal = legal[t]
-				
-				tree.append(lexeme)
+			tree.append(lexeme)
 
-			else:
-				print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
+		else:
+			print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
+			break
+		"""
+
+		"""
+		if isinstance(lexeme, self.lang.Keyword):
+			pass
+
+		# catch keywords
+		if isinstance(lexeme, self.lang.Identifier) or isinstance(lexeme, self.lang.Identifier):
+			sentence.push(lexeme)
+		"""
+
+class Terminal:
+	def __init__(self):
+		self.parser = Parser(Doubletalk(), 'test.dtk')
+
+	def run(self):
+		while True:
+			ch = self.getchar()
+
+			if ch == 'q':
 				break
-			"""
 
-			"""
-			if isinstance(lexeme, self.lang.Keyword):
-				pass
-
-			# catch keywords
-			if isinstance(lexeme, self.lang.Identifier) or isinstance(lexeme, self.lang.Identifier):
-				sentence.push(lexeme)
-			"""
-
-		print '----------------------------'
-		print statement
+			print '-' * 80
+			print 'Instr: %s' % (self.parser.parse())
 			
 
-
+	def getchar(self):
+		#Returns a single character from standard input
+		fd = sys.stdin.fileno()
+		old_settings = termios.tcgetattr(fd)
+		try:
+			tty.setraw(sys.stdin.fileno())
+			ch = sys.stdin.read(1)
+		finally:
+			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+			return ch
+   
 		
 			
 			
-lex = Parser(Doubletalk(), 'test.dtk')
-tree = lex.parse()
 
-#print tree
+
+T = Terminal()
+
+T.run()
 
