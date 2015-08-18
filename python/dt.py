@@ -8,12 +8,15 @@ class Doubletalk(object):
 
 	class Lexeme(object):
 		def __init__(self, token, **kwargs):
-			self.token = token
+			self.token 		= token
 			self.set(kwargs)
 
 		def set(self, kwargs):
 			for i in kwargs:
 				setattr(self, i, kwargs[i])
+		
+		def lextype(self):
+			return '<none>'
 
 		def process(self, parser, **kwargs):
 			pass
@@ -26,7 +29,8 @@ class Doubletalk(object):
 		pass
 
 	class NewLine(WhiteSpace):
-		pass
+		def lextype(self):
+			return '<newline>'
 
 	class Tab(WhiteSpace):
 		pass
@@ -91,13 +95,29 @@ class Doubletalk(object):
 	class Delimiter(Lexeme):
 		pass
 	
-	class End(Keyword, Delimiter):
+	class End(Delimiter):
 		
 		def lextype(self):
 			return '<end>'
 
 		def __repr__(self):
 			return '<end>'
+	
+	class Then(Delimiter):
+		
+		def lextype(self):
+			return '<then>'
+
+		def __repr__(self):
+			return '<then>'
+
+	class Else(Delimiter):
+		
+		def lextype(self):
+			return '<else>'
+
+		def __repr__(self):
+			return '<else>'
 
 	# keywords
 	class Prnt(Keyword):
@@ -109,45 +129,26 @@ class Doubletalk(object):
 			return '<prnt>'
 
 	class If(Keyword):
+	
+		def __init__(self, token, **kwargs):
+			self.condition = None
+			self.yay_block = None
+			self.nay_block = None
+			super(Doubletalk.If, self).__init__(token)
 
 		def lextype(self):
 			return '<if>'
 
 		def process(self, parser, **kwargs):
-			condition = parser.expression()
-			statement = None
-			block = []
-			while True:
-				statement = parser.statement()
-				if len(statement) > 0:
-					block.append(statement)
-				else:
-					break
-
-			print 'code pass here'
-			then = parser.then()
 			
-
-			return [condition, block, then]
+			self.condition 	= parser.parse(until=r'<then>')
+			self.yay_block	= parser.parse(until=r'<else>|<end>')
+			self.nay_block 	= parser.parse(until=r'<end>')
+		
+			return [self.condition, self.yay_block, self.nay_block]
 
 		def __repr__(self):
 			return '<if>'
-
-	class Then(Keyword, Delimiter):
-		
-		def lextype(self):
-			return '<then>'
-
-		def __repr__(self):
-			return '<then>'
-
-	class Else(Keyword, Delimiter):
-		
-		def lextype(self):
-			return '<else>'
-
-		def __repr__(self):
-			return '<else>'
 
 	#preprocesor
 	class Preprocessor(Lexeme):
@@ -190,60 +191,13 @@ class Doubletalk(object):
 		'end':		lambda t: Doubletalk.End(t),
 		'include':	lambda t: Doubletalk.Include(t)
 	}
-	
-	block = {
-		r'<statement>': {
-			r'<statement>': lambda: Doubletalk.block,
-			r'<end>': None
-		}
-	}
 
-	expression = {
-		r'<const>|<ident>': {
-			'<op>': lambda: Doubletalk.expression
-		}
-	}
-	
 	statement = {
-		r'<if>': {
-			r'<expr>': {
-				r'<then>': {
-					r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expr>'][r'<then>'],
-					r'<else>': {
-						r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expr>'][r'<then>'][r'<else>'],
-						r'<end>': lambda: Doubletalk.statement
-					},
-					r'<end>': lambda: Doubletalk.statement
-				}
-			}
+		r'<const>|<ident>': {
+			'<op>': lambda: Doubletalk.statement
 		}
 	}
-	
-	class Block(list):
-		def __init__(self):
-			self.grammar = Doubletalk.block
-			super(Doubletalk.Block, self).__init__()
 		
-		def is_legal(self, i):
-	
-			for r in self.grammar:
-						
-				if re.match(r, i.lextype()):
-					return r
-					
-			return False
-
-		def push(self, i):
-
-			l = self.is_legal(i)
-			if l:
-				self.grammar = self.grammar[l] if not callable(self.grammar[l]) else self.grammar[l]()
-				super(Doubletalk.Block, self).append(i)	
-				return self					
-		
-			return False
-			
-
 	class Statement(list):
 		def __init__(self):
 			self.grammar = Doubletalk.statement
@@ -268,31 +222,7 @@ class Doubletalk(object):
 		
 			return False
 	
-	class Expression(list):
-		def __init__(self):
-			self.grammar = Doubletalk.expression
-			super(Doubletalk.Expression, self).__init__()
-
-		def is_legal(self, i):
-			for r in self.grammar:
-				if re.match(r, i.lextype()):
-					return r
-			return False
-
-		def push(self, i):
-			l = self.is_legal(i)
-			if l:
-				self.grammar = self.grammar[l] if not callable(self.grammar[l]) else self.grammar[l]()
-				super(Doubletalk.Expression, self).append(i)	
-				return self					
-			
-			return False
-			#raise Exception('Unexpected token "%s" in line %s, char %s.' % (i.token.word, i.token.line, i.token.char))
-
-		def lextype(self):
-			return '<expr>'
 		
-	
 	delimiters = "[.:!,;+*^&@#$%&'\"\-\\/\|=$()?<>\s]"
 	
 	r_space 		= r'[ ]'
@@ -506,156 +436,54 @@ class Parser(object):
 				verbatim.append(lexeme.token.word)
 
 		return False
-
-	def expression(self):
-		expr = Doubletalk.Expression()
-
-		while True:
-			term = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()	
-			
-			if term is False:
-				break
-
-			if isinstance(term, self.lang.WhiteSpace):
-				continue
-
-			if not expr.push(term):
-				self.pending.append(term)
-				break
-
-		return expr
-
-
-	def statement(self):
+		
+	def parse(self, until='<newline>'):
+	
+		block = []
 		statement = Doubletalk.Statement()
-
+		
 		while True:
-			term =  self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
-			
-			if term is False or isinstance(term, self.lang.NewLine):
+			lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
+				
+			# EOF
+			if lexeme is False:
 				break
-
-			if isinstance(term, self.lang.WhiteSpace):
+				
+			# stop character
+			if until is not None:
+				if re.match(until, lexeme.lextype()):
+					if len(statement) > 0:	
+						block.append(statement)
+					break
+			else:
+				if lexeme == until:
+					break
+				
+			# EOL
+			if isinstance(lexeme, self.lang.NewLine):
 				continue
 
-			if not statement.push(term):
-				self.pending.append(term)
-				break
-
-		return statement
-
-	def then(self):
-		term =  self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
-		print term
-		return term
-	
-	def block(self):
-		pass
-		
-	def parse(self):
-
-		try: 
-
-			while True:
-				lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
-				if lexeme is False:
-					break
-
-				if isinstance(lexeme, self.lang.NewLine):
-					break
-
-				if isinstance(lexeme, self.lang.WhiteSpace):
-					continue
-
-				"""
-				# catch preprocessor directives
-				if isinstance(lexeme, self.lang.Preprocessor):
-
-					if isinstance(lexeme, self.lang.CommentBlock):
-						if not self.verbatim(self.lang.CommentBlock, open=False):
-							raise Exception('Comment block missing closure')
-						else:
-							continue
-
-					if isinstance(lexeme, self.lang.CommentLine):
-						self.verbatim(self.lang.NewLine)
-						continue
-
-					# catch variables, functions, keywords
-					if isinstance(lexeme, self.lang.Keyword):
-						#tree.append(lexeme.process(self.parse))
-						continue
-				# end of block --- catch preprocessor directives
-				"""
+			# white space
+			if isinstance(lexeme, self.lang.WhiteSpace):
+				continue
+			
+			print 'Found: %s' % (lexeme)
 				
-				print lexeme
-				
-				if isinstance(lexeme, self.lang.Keyword):
-
-					statement = lexeme.process(self, keyword=lexeme)
-					break
-				elif isinstance(lexeme, (self.lang.Identifier, self.lang.Constant)):
-					self.pending.append(lexeme)
-					statement = self.expression()
-					break
-				else:
-					print 'Unexpected token "%s" in line %s, char %s.' % (lexeme.token.word, lexeme.token.line, lexeme.token.char)
+			# keywords
+			if isinstance(lexeme, self.lang.Keyword):
+				print 'Taking keyword route'
+				block.append(lexeme.process(self, keyword=lexeme))
+				continue
 					
-		
-		except Exception as e:
-			print e
-			print '----------------------------'
-			print statement
-			exit(1)
-		
-		return statement
-	
-		
-		"""
-		l = lexeme.__repr__()
-
-		if lexeme.__repr__() in legal:
-			sentence.append(lexeme)
-		else:
-			print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
-			break
-		"""
-			
-
-
-		"""
-		t = lexeme.__repr__()
-
-		print t
-
-		if isinstance(legal, list):
-			legal = legal.pop(0)
-			
-		if callable(legal):
-			legal = legal()
-		
-		if t in legal:
-			if callable(t):
-				legal = legal[t]()
-			else:
-				legal = legal[t]
-			
-			tree.append(lexeme)
-
-		else:
-			print 'Unexpected token "%s" in line %s, char %s.\nExpecting %s' % (lexeme.token.word, lexeme.token.line, lexeme.token.char, ' | '.join(legal.keys()))
-			break
-		"""
-
-		"""
-		if isinstance(lexeme, self.lang.Keyword):
-			pass
-
-		# catch keywords
-		if isinstance(lexeme, self.lang.Identifier) or isinstance(lexeme, self.lang.Identifier):
-			sentence.push(lexeme)
-		"""
-
+			if not statement.push(lexeme):
+				print 'Rejected: %s' % (lexeme)
+				self.pending.append(lexeme)
+				block.append(statement)
+				statement = Doubletalk.Statement()
+				continue
+						
+		return block
+				
 class Terminal:
 	def __init__(self):
 		self.parser = Parser(Doubletalk(), 'test.dtk')
@@ -670,7 +498,7 @@ class Terminal:
 			instr = self.parser.parse()
 
 			print '-' * 80
-			print 'Instr: (%s) %s' % (type(instr), instr)
+			print 'I: %s' % (instr)
 			
 
 	def getchar(self):
