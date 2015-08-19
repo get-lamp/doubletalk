@@ -143,7 +143,19 @@ class Doubletalk(object):
 			
 			self.condition 	= parser.parse(until=r'<then>')
 			self.yay_block	= parser.parse(until=r'<else>|<end>')
-			self.nay_block 	= parser.parse(until=r'<end>')
+			
+			try:
+				if parser.delimiter.__repr__() == '<else>':
+					self.nay_block 	= parser.parse(until=r'<end>')
+				elif parser.delimiter.__repr__() != '<end>':
+					raise Exception('<end> missing')
+			except Exception as e:
+				print e
+				print 'Last delimiter:'
+				print parser.delimiter
+				print 'Last block parsed: '
+				print self.yay_block
+				exit(1)
 		
 			return [self.condition, self.yay_block, self.nay_block]
 
@@ -441,23 +453,23 @@ class Parser(object):
 	
 		block = []
 		statement = Doubletalk.Statement()
+		self.delimiter = None
 		
 		while True:
 			lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
-				
+			
 			# EOF
 			if lexeme is False:
-				break
+				return False
 				
 			# stop character
-			if until is not None:
-				if re.match(until, lexeme.lextype()):
-					if len(statement) > 0:	
-						block.append(statement)
-					break
-			else:
-				if lexeme == until:
-					break
+			#print 'Testing %s against %s' % (until, lexeme.lextype())
+			if re.match(until, lexeme.lextype()):
+				self.delimiter = lexeme
+				# what is this?
+				if len(statement) > 0:	
+					block.append(statement)
+				break
 				
 			# EOL
 			if isinstance(lexeme, self.lang.NewLine):
@@ -467,21 +479,24 @@ class Parser(object):
 			if isinstance(lexeme, self.lang.WhiteSpace):
 				continue
 			
-			print 'Found: %s' % (lexeme)
+			#print 'Found: %s' % (lexeme)
 				
 			# keywords
 			if isinstance(lexeme, self.lang.Keyword):
-				print 'Taking keyword route'
+				#print 'Taking keyword route'
 				block.append(lexeme.process(self, keyword=lexeme))
 				continue
 					
 			if not statement.push(lexeme):
-				print 'Rejected: %s' % (lexeme)
+				#print 'Rejected: %s' % (lexeme)
 				self.pending.append(lexeme)
-				block.append(statement)
-				statement = Doubletalk.Statement()
-				continue
-						
+				if len(statement) > 0:
+					block.append(statement)
+					statement = Doubletalk.Statement()
+					continue
+				else:
+					break
+					
 		return block
 				
 class Terminal:
@@ -496,6 +511,10 @@ class Terminal:
 				break
 				
 			instr = self.parser.parse()
+			
+			if instr is False:
+				print 'EOF'
+				break
 
 			print '-' * 80
 			print 'I: %s' % (instr)

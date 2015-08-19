@@ -1,7 +1,11 @@
 l = j
-if a+b == 1 then 
+if a+b == 1 then
 	a = b - 1 
 	c = a + 12
+	if true then
+		do_something_amazing
+		end
 else
 	do_another_thing
 end
+f = f / (3+3*(niak + 2))
