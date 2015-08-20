@@ -1,7 +1,4 @@
-#!/usr/bin/python
-
 import StringIO, re
-from GrammarTree import *
 import tty, termios, sys
 
 class Doubletalk(object):

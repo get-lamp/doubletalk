@@ -3,7 +3,7 @@ from interp import *
 
 class Terminal:
 	def __init__(self):
-		self.interp = Interpreter(Doubletalk(), 'test.dtk')
+		self.interp = Interpreter()
 
 	def run(self):
 		while True:
@@ -33,11 +33,8 @@ class Terminal:
 			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 			return ch
    
-#T = Terminal()
-#T.run()
-
-I = Interpreter()
-I.read() 
+T = Terminal()
+T.run()
 
 
 
