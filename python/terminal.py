@@ -1,5 +1,47 @@
 #!/usr/bin/python
+from interp import *
 
+class Terminal:
+	def __init__(self):
+		self.interp = Interpreter(Doubletalk(), 'test.dtk')
+
+	def run(self):
+		while True:
+			ch = self.getchar()
+
+			if ch == 'q':
+				break
+				
+			instr = self.interp.read()
+			
+			if instr is False:
+				print 'EOF'
+				break
+
+			print '-' * 80
+			print 'I: %s' % (instr)
+			
+
+	def getchar(self):
+		#Returns a single character from standard input
+		fd = sys.stdin.fileno()
+		old_settings = termios.tcgetattr(fd)
+		try:
+			tty.setraw(sys.stdin.fileno())
+			ch = sys.stdin.read(1)
+		finally:
+			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+			return ch
+   
+#T = Terminal()
+#T.run()
+
+I = Interpreter()
+I.read() 
+
+
+
+"""
 import readline
 readline.parse_and_bind("tab: complete")
 
@@ -52,3 +94,4 @@ completer = SFACompleter("rules5.txt")
 readline.set_completer(completer.complete)
 
 line = raw_input('prompt> ')
+"""

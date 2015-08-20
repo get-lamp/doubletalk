@@ -410,7 +410,8 @@ class Lexer(object):
 			token.word = ''.join(word)
 
 			return tree(token)
-		
+
+	
 class Parser(object):
 
 	def __init__(self, lang, source, is_file=True):
@@ -498,45 +499,4 @@ class Parser(object):
 					break
 					
 		return block
-				
-class Terminal:
-	def __init__(self):
-		self.parser = Parser(Doubletalk(), 'test.dtk')
-
-	def run(self):
-		while True:
-			ch = self.getchar()
-
-			if ch == 'q':
-				break
-				
-			instr = self.parser.parse()
-			
-			if instr is False:
-				print 'EOF'
-				break
-
-			print '-' * 80
-			print 'I: %s' % (instr)
-			
-
-	def getchar(self):
-		#Returns a single character from standard input
-		fd = sys.stdin.fileno()
-		old_settings = termios.tcgetattr(fd)
-		try:
-			tty.setraw(sys.stdin.fileno())
-			ch = sys.stdin.read(1)
-		finally:
-			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-			return ch
-   
-		
-			
-			
-
-
-T = Terminal()
-
-T.run()
 
