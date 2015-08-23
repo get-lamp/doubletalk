@@ -1,11 +1,23 @@
-l = j
+a = 10 + (5 - 3) * 2
+
+
+b = 20
+
+prnt a + b
+
 if a+b == 1 then
 	a = b - 1 
+	
 	c = a + 12
+	
 	if true then
 		do_something_amazing
 		end
 else
 	do_another_thing
 end
+
+
 f = f / (3+3*(niak + 2))
+
+

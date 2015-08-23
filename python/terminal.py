@@ -18,8 +18,8 @@ class Terminal:
 				print 'EOF'
 				break
 
-			print '-' * 80
-			print 'I: %s' % (instr)
+			#print '-' * 80
+			#print 'I: %s' % (instr)
 			
 
 	def getchar(self):
