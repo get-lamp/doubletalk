@@ -23,7 +23,7 @@ class Doubletalk(object):
 
 		def parse(self, parser, **kwargs):
 			pass
-
+		
 	# white space
 	class WhiteSpace(Lexeme):
 		pass
@@ -42,7 +42,7 @@ class Doubletalk(object):
 	class Constant(Lexeme):
 		def lextype(self):
 			return '<const>'
-
+			
 		def __repr__(self):
 			return '<const %s>' % (self.token.word)
 
@@ -50,8 +50,24 @@ class Doubletalk(object):
 		pass
 	
 	class Number(Constant):
-		pass
-
+		def __int__(self):
+			return int(self.token.word)
+			
+		def __add__(self, other):
+			return int(self) + int(other)
+		
+		def __sub__(self, other):
+			return int(self) - int(other)
+		
+		def __mul__(self, other):
+			return int(self) * int(other)
+		
+		def __div__(self, other):
+			return int(self) / int(other)
+		
+		def eval(self):
+			return int(self.token.word)
+		
 	# operators
 	class Operator(Lexeme):
 		def lextype(self):
@@ -59,33 +75,45 @@ class Doubletalk(object):
 
 		def __repr__(self):
 			return '<op %s>' % (self.token.word)
+		
+		def eval(self, left, right):
+			pass
 
 	class Assign(Operator):
-		pass
+		def eval(self, left, right, heap):
+			heap[left.label] = right
+			return right
 
 	class Equal(Operator):
-		pass
+		def eval(self, left, right, scope):
+			return left == right
 
 	class EqualStrict(Operator):
 		pass
 
 	class Subtract(Operator):
-		pass
+		def eval(self, left, right, scope):
+			return left - right
 
 	class Add(Operator):
-		pass
+		def eval(self, left, right, scope):
+			return left + right
 
 	class Increment(Operator):
-		pass
+		def eval(self, left):
+			pass
 
 	class Decrement(Operator):
-		pass
+		def eval(self, left):
+			pass
 
 	class Divide(Operator):
-		pass
+		def eval(self, left, right, scope):
+			return left / right
 
 	class Multiply(Operator):
-		pass
+		def eval(self, left, right, scope):
+			return left * right
 
 	# keywords
 	class Keyword(Lexeme):
@@ -138,7 +166,10 @@ class Doubletalk(object):
 		
 		def parse(self, parser, **kwargs):
 			args = parser.parse();
-			return self	
+			return [self, args]
+		
+		def eval(self, i):
+			print i
 
 		def __repr__(self):
 			return '<prnt>'
@@ -160,9 +191,9 @@ class Doubletalk(object):
 			self.yay_block	= parser.parse(until=r'<else>|<end>')
 			
 			try:
-				if parser.delimiter.__repr__() == '<else>':
+				if parser.delimiter.lextype() == '<else>':
 					self.nay_block 	= parser.parse(until=r'<end>')
-				elif parser.delimiter.__repr__() != '<end>':
+				elif parser.delimiter.lextype() != '<end>':
 					raise Exception('<end> missing')
 			except Exception as e:
 				print e
@@ -172,7 +203,7 @@ class Doubletalk(object):
 				print self.yay_block
 				exit(1)
 		
-			return [self.condition, self.yay_block, self.nay_block]
+			return self #[self.condition, self.yay_block, self.nay_block]
 		
 		def __repr__(self):
 			return '<if>'
@@ -195,10 +226,19 @@ class Doubletalk(object):
 		
 	# identifiers
 	class Identifier(Lexeme):
+		
+		def __init__(self, token, **kwargs):
+			self.label = token.word
+			super(Doubletalk.Identifier, self).__init__(token)
+		
 		def lextype(self):
 			return '<ident>'
+		
 		def __repr__(self):
 			return '<ident %s>' % (self.token.word)
+		
+		def eval(self, heap):
+			return heap.get(self.label, None)
 
 	# entity
 	class GameObject(Lexeme):
@@ -261,17 +301,21 @@ class Doubletalk(object):
 			t = []
 			while len(s) > 0:
 				# catch parentheses
-				if isinstance(s[:1], Doubletalk.Parentheses):
+				if isinstance(s[0], Doubletalk.Parentheses):
 					p = s.pop(0)
 					if p.open:
-						t.append(self.build(s))
+						t.append([self.build(s)])
 				
 				# second operand its an expression
 				if len(t) >= 2 and len(s) > 1:
 					t.append(self.build(s))
 				elif len(s) > 0:
-					# a constant or identifier
-					t.append(s.pop(0))
+					# do not push delimiters
+					if isinstance(s[0], Doubletalk.Delimiter):
+						s.pop(0)
+					else:
+						# a constant or identifier
+						t.append(s.pop(0))
 			
 			return t
 	
@@ -511,7 +555,12 @@ class Parser(object):
 			
 				# preprocessor directives
 				if isinstance(lexeme, self.lang.Preprocessor):
+					if isinstance(lexeme, self.lang.CommentLine):
+						# skips until newline
+						self.verbatim(self.lang.NewLine)
+						continue
 					if isinstance(lexeme, self.lang.CommentBlock):
+						# skips until closed comment block
 						self.verbatim(self.lang.CommentBlock, open=False)
 						continue
 			
