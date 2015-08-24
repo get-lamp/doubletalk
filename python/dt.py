@@ -304,7 +304,12 @@ class Doubletalk(object):
 				if isinstance(s[0], Doubletalk.Parentheses):
 					p = s.pop(0)
 					if p.open:
-						t.append([self.build(s)])
+						g = []
+						while not isinstance(s[0], Doubletalk.Parentheses) and len(s) > 1
+							g.append(s.pop(0))
+						t.append(self.build(g))
+					
+					return t
 				
 				# second operand its an expression
 				if len(t) >= 2 and len(s) > 1:

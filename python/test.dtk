@@ -1,11 +1,12 @@
 //somename arg1 args2 arg3 argn
 
-a = 10 + (5 - 3) * 2
+a = (10 + (5 - 3) * 2) / 3
 
+/*
 b = 20
 
 prnt a + b
-
+*/
 /*
 if a+b == 1 then
 	a = b - 1 

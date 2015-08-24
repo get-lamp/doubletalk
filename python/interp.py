@@ -27,12 +27,12 @@ class Interpreter(object):
 		print '-' * 80
 		
 		for i in instr:
-			try:
+			#try:
 		
-				print self.eval(i)
+			print self.eval(i)
 			
-			except Exception as e:
-				print e
+			#except Exception as e:
+				#print e
 
 		return instr
 	
@@ -40,8 +40,10 @@ class Interpreter(object):
 			
 		if isinstance(i, self.lang.Identifier):
 			return i.eval(self.memory.heap)
-		
-		return i.eval()
+		elif isinstance(i, self.lang.Constant):
+			return i.eval()
+		else:
+			return i
 	
 	def eval(self, i):
 		
@@ -60,14 +62,23 @@ class Interpreter(object):
 				print 'Unary: %s' % (i)
 			# ternary operation
 			elif not len(i) > 3:
-								
+			
+				for k,v in enumerate(i):
+					if isinstance(i[k], list):
+						i[k] = self.eval(i[k])
+					elif k == OPERAND_R:
+						# only values in right operand
+						i[k] = self.getval(i[k])
+					
+				"""
 				# right operand is an expression? Eval it
 				if isinstance(i[OPERAND_R], list):
 					i[OPERAND_R] = self.eval(i[OPERAND_R])
 				else:
 					# only values in right operand
 					i[OPERAND_R] = self.getval(i[OPERAND_R])
-					
+				"""	
+				
 				# operator is really an operator?
 				if isinstance(i[OPERATOR], self.lang.Operator):
 					if not isinstance(i[OPERATOR], self.lang.Assign):
