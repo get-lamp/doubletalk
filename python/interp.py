@@ -47,7 +47,20 @@ class Interpreter(object):
 			
 			if len(i) > 3:
 				raise Exception('Illegal statement in line %s' % (i[0].token.line))
-						
+				
+			for k,v in enumerate(i):
+				if isinstance(i[k], list):
+					i[k] = self.eval(i[k])
+				else:
+					i[k] = self.getval(i[k])
+			
+			print i
+			
+		else:
+			return self.getval(i)
+			
+					
+		"""				
 			# operator is really an operator?
 			if isinstance(i[OPERATOR], self.lang.Operator):
 				if not isinstance(i[OPERATOR], self.lang.Assign):
@@ -61,7 +74,7 @@ class Interpreter(object):
 		else:
 			print i
 			return self.getval(i)
-		
+		"""
 		"""
 		# remove unneded nesting
 		# TODO: tiddy up. It shouldn't be necessary to do this
