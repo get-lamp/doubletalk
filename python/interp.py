@@ -17,24 +17,20 @@ class Interpreter(object):
 		self.memory	= Interpreter.Memory()
 			
 	def read(self):
-		instr = self.parser.parse()
+		inst = self.parser.parse()
 		
-		if instr is False:
+		if inst is False:
 			return False
 		
-		print instr
+		tree = self.parser.build(inst)
+		
+		print tree
 		print self.memory.heap
 		print '-' * 80
 		
-		for i in instr:
-			#try:
-		
-			print self.eval(i)
-			
-			#except Exception as e:
-				#print e
-
-		return instr
+		print self.eval(tree)
+				
+		return tree
 	
 	def getval(self, i):
 			
@@ -46,7 +42,27 @@ class Interpreter(object):
 			return i
 	
 	def eval(self, i):
+	
+		if isinstance(i, list):
+			
+			if len(i) > 3:
+				raise Exception('Illegal statement in line %s' % (i[0].token.line))
+						
+			# operator is really an operator?
+			if isinstance(i[OPERATOR], self.lang.Operator):
+				if not isinstance(i[OPERATOR], self.lang.Assign):
+					i[OPERAND_L] = self.getval(i[OPERAND_L])
+						
+				return i[OPERATOR].eval(self.eval(i[OPERAND_L]), self.eval(i[OPERAND_R]), self.memory.heap)
+				
+			else:
+				raise Exception('Expecting operator in line %s' % (i[OPERATOR].token.line))
+							
+		else:
+			print i
+			return self.getval(i)
 		
+		"""
 		# remove unneded nesting
 		# TODO: tiddy up. It shouldn't be necessary to do this
 		if len(i) == 1 and isinstance(i, list):
@@ -70,14 +86,14 @@ class Interpreter(object):
 						# only values in right operand
 						i[k] = self.getval(i[k])
 					
-				"""
+				
 				# right operand is an expression? Eval it
 				if isinstance(i[OPERAND_R], list):
 					i[OPERAND_R] = self.eval(i[OPERAND_R])
 				else:
 					# only values in right operand
 					i[OPERAND_R] = self.getval(i[OPERAND_R])
-				"""	
+					
 				
 				# operator is really an operator?
 				if isinstance(i[OPERATOR], self.lang.Operator):
@@ -92,6 +108,6 @@ class Interpreter(object):
 			# ilegal
 			else:
 				raise Exception('Illegal statement in line %s' % (i[0].token.line))
-		 
+		 	"""
 		return i
 		

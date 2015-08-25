@@ -295,36 +295,6 @@ class Doubletalk(object):
 			# close statement
 			return False
 			
-		def build(self, s=None):
-			# if s is None, parse self. That is the root
-			s = s if s is not None else self
-			t = []
-			while len(s) > 0:
-				# catch parentheses
-				if isinstance(s[0], Doubletalk.Parentheses):
-					p = s.pop(0)
-					if p.open:
-						g = []
-						while not isinstance(s[0], Doubletalk.Parentheses) and len(s) > 1
-							g.append(s.pop(0))
-						t.append(self.build(g))
-					
-					return t
-				
-				# second operand its an expression
-				if len(t) >= 2 and len(s) > 1:
-					t.append(self.build(s))
-				elif len(s) > 0:
-					# do not push delimiters
-					if isinstance(s[0], Doubletalk.Delimiter):
-						s.pop(0)
-					else:
-						# a constant or identifier
-						t.append(s.pop(0))
-			
-			return t
-	
-		
 	delimiters = "[.:!,;+*^&@#$%&'\"\-\\/\|=$()?<>\s]"
 	
 	r_space 		= r'[ ]'
@@ -513,6 +483,18 @@ class Parser(object):
 		self.lexer 	= Lexer(lang, source, is_file)
 		self.tree 	= []
 		self.pending = []
+		
+	def unnest(self, s, stop, **kwargs):
+		n = []
+		while True and len(s) > 0:
+			i = s.pop(-1)
+			if isinstance(i, stop):
+				break
+			else:
+				n.insert(0, i)
+				
+				
+		return (s,n)
 
 	def verbatim(self, stop, **kwargs):
 		verbatim = []
@@ -579,7 +561,7 @@ class Parser(object):
 					self.delimiter = lexeme
 					# what is this?
 					if len(statement) > 0:	
-						block.append(statement.build())
+						block.append(statement)
 					break
 				
 				# EOL
@@ -604,7 +586,7 @@ class Parser(object):
 					self.pending.append(lexeme)
 					if len(statement) > 0:
 						# push built statement
-						block.append(statement.build())
+						block.append(statement)
 						continue
 					else:
 						raise Exception("Unexpected '%s' in line %s" % (lexeme.token.word, lexeme.token.line))
@@ -614,4 +596,36 @@ class Parser(object):
 			exit(1)
 			
 		return block
+	
+	def build(self, s=None):
+		#self.unnest(s.pop(), self.lang.Parentheses, open=False)
+		
+		# if s is None, parse self. That is the root
+		s = s if s is not None else self
+		t = []
+		n = []
+		
+		if isinstance(s, list) and len(s) == 1 and isinstance(s[0], list):
+			s = s.pop()
+		
+		while len(s) > 0:
+			
+			i = s.pop(0)
+			# grouping
+			if isinstance(i, self.lang.Parentheses):
+				if i.open:
+					# n is the i(n)ner node while s is the remaining (i)nstruction
+					n,s = self.unnest(s, self.lang.Parentheses, open=False)
+					if len(n) > 0:
+						n = self.build(n)						
+				else:
+					raise Exception('Unexpected parentheses at %s' % (i.token.line))
+			
+			# operator delimits terms
+			elif isinstance(i, self.lang.Operator):
+				return [n, i, self.build(s)]
+			else:
+				n.append(i)
+				
+		return n	
 
