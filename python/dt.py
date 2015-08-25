@@ -165,11 +165,12 @@ class Doubletalk(object):
 			return '<prnt>'
 		
 		def parse(self, parser, **kwargs):
-			args = parser.parse();
-			return [self, args]
+			inst = parser.parse();
+			inst.insert(0, self)
+			return inst
 		
 		def eval(self, i):
-			print i
+			print i.pop()
 
 		def __repr__(self):
 			return '<prnt>'
@@ -583,12 +584,15 @@ class Parser(object):
 				# try to push to an expression	
 				if not statement.push(lexeme):
 					#print 'Rejected: %s' % (lexeme)
+					# word may belong to next instruction
 					self.pending.append(lexeme)
+					statement = Doubletalk.Statement()
 					if len(statement) > 0:
 						# push built statement
 						block.append(statement)
 						continue
 					else:
+						print statement
 						raise Exception("Unexpected '%s' in line %s" % (lexeme.token.word, lexeme.token.line))
 						break
 		except Exception as e:
@@ -598,13 +602,13 @@ class Parser(object):
 		return block
 	
 	def build(self, s=None):
-		#self.unnest(s.pop(), self.lang.Parentheses, open=False)
 		
 		# if s is None, parse self. That is the root
 		s = s if s is not None else self
 		t = []
 		n = []
 		
+		# get rid of superfluous nesting
 		if isinstance(s, list) and len(s) == 1 and isinstance(s[0], list):
 			s = s.pop()
 		

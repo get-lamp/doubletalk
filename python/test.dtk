@@ -1,28 +1,17 @@
 //somename arg1 args2 arg3 argn
 
-a = ((3 + 2) * 6) / 2
+a= (0 + 1)
+b=1
 
-//a = (10 + (5 - 3) * 2) / 3
+prnt a-(1+b) * 2
 
-/*
-b = 20
-
-prnt a + b
-*/
 /*
 if a+b == 1 then
 	a = b - 1 
 	
 	c = a + 12
-	
-	if true then
-		do_something_amazing
-		end
+
 else
-	do_another_thing
+	prnt c
 end
-
-
-f = f / (3+3*(niak + 2))
 */
-
