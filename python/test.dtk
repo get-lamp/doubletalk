@@ -1,3 +1,22 @@
-a = 'hello world'
-prnt a
+//somename arg1 args2 arg3 argn
+
+a = 5 * (10 + 10) / 2 * 1
+b = 10
+
+prnt a - b
+
+
+if (a+b) == 1 then
+	a = b - 1 
+	
+	c = a + 12
+	
+	prnt c
+
+else
+	prnt c
+	prnt 1
+	prnt 2
+	prnt 3
+end
 

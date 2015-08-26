@@ -29,7 +29,7 @@ class Interpreter(object):
 		print '-' * 80
 		self.eval(tree)
 
-		print self.memory.heap
+		#print self.memory.heap
 		
 				
 		return tree

@@ -646,7 +646,7 @@ class Parser(object):
 		if isinstance(s, list) and len(s) == 1 and isinstance(s[0], list):
 			s = s.pop()
 		
-		while len(s) > 0:
+		while s and len(s) > 0:
 			
 			i = s.pop(0)
 			# grouping
