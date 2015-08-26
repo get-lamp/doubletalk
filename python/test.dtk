@@ -3,7 +3,7 @@
 a= (0 + 1)
 b=1
 
-prnt a-(1+b) * 2
+prnt a + 2
 
 /*
 if a+b == 1 then
