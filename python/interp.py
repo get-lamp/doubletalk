@@ -22,16 +22,14 @@ class Interpreter(object):
 		if inst is False:
 			return False
 		
-		print inst
-
 		tree = self.parser.build(inst)
 		
-		print tree
-		
-		#print '-' * 80
-		print self.eval(tree)
 
-		#print self.memory.heap
+		print tree
+		print '-' * 80
+		self.eval(tree)
+
+		print self.memory.heap
 		
 				
 		return tree
@@ -56,19 +54,18 @@ class Interpreter(object):
 				if isinstance(v, list):
 					i[k] = self.eval(v)
 					
+			# a keyword
+			if isinstance(i[OPERAND_L], self.lang.Keyword):
+				i[OPERAND_L].eval(self)
 			# a value
 			if len(i) < 2:
 				return i.pop()
-			# an instruction
+			
+			# a binary operation
+			if isinstance(i[OPERATOR], self.lang.Assign):
+				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.memory.heap)
 			else:
-				# a keyword
-				if isinstance(i[OPERAND_L], self.lang.Keyword):
-					i[OPERAND_L].eval(i[1:])
-				# a binary operation
-				elif isinstance(i[OPERATOR], self.lang.Assign):
-					return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.memory.heap)
-				else:
-					return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.memory.heap)
+				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.memory.heap)
 				
 		else:
 			return i

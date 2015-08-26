@@ -47,7 +47,8 @@ class Doubletalk(object):
 			return '<const %s>' % (self.token.word)
 
 	class String(Constant):
-		pass
+		def eval(self):
+			return str(self.token.word)
 	
 	class Number(Constant):
 		def __int__(self):
@@ -125,7 +126,7 @@ class Doubletalk(object):
 	# block delimiters
 	class Delimiter(Lexeme):
 		pass
-	
+		
 	class End(Delimiter):
 		
 		def lextype(self):
@@ -157,6 +158,22 @@ class Doubletalk(object):
 
 		def __repr__(self):
 			return '<delim>' if self.open else '</delim>'
+	
+	class DoubleQuote(Delimiter):
+		
+		def lextype(self):
+			return '<d-quote>'
+
+		def __repr__(self):
+			return '<d-quote>'
+	
+	class SingleQuote(Delimiter):
+		
+		def lextype(self):
+			return '<s-quote>'
+
+		def __repr__(self):
+			return '<s-quote>'
 
 	# keywords
 	class Prnt(Keyword):
@@ -165,12 +182,11 @@ class Doubletalk(object):
 			return '<prnt>'
 		
 		def parse(self, parser, **kwargs):
-			inst = parser.parse();
-			inst.insert(0, self)
-			return inst
+			self.text = parser.build(parser.parse());
+			return self
 		
-		def eval(self, i):
-			print i.pop()
+		def eval(self, interp):
+			print interp.getval(interp.eval(self.text))
 
 		def __repr__(self):
 			return '<prnt>'
@@ -188,23 +204,35 @@ class Doubletalk(object):
 
 		def parse(self, parser, **kwargs):
 			
-			self.condition 	= parser.parse(until=r'<then>')
-			self.yay_block	= parser.parse(until=r'<else>|<end>')
+			#try:
+			self.condition 	= parser.build(parser.parse(until=r'<then>'))
+			self.yay_block	= parser.build(parser.parse(until=r'<else>|<end>'))
 			
-			try:
-				if parser.delimiter.lextype() == '<else>':
-					self.nay_block 	= parser.parse(until=r'<end>')
-				elif parser.delimiter.lextype() != '<end>':
-					raise Exception('<end> missing')
-			except Exception as e:
-				print e
-				print 'Last delimiter:'
-				print parser.delimiter
-				print 'Last block parsed: '
-				print self.yay_block
-				exit(1)
+			if parser.delimiter.lextype() == '<else>':
+				self.nay_block 	= parser.build(parser.parse(until=r'<end>'))
+			elif parser.delimiter.lextype() != '<end>':
+				raise Exception('<end> missing')
+					
+			#except Exception as e:
+			#	print e
+			#	print 'Last delimiter:'
+			#	print parser.delimiter
+			#	print 'Last block parsed: '
+			#	print self.yay_block
+			#	exit(1)
 		
 			return self #[self.condition, self.yay_block, self.nay_block]
+		
+		def eval(self, interp):
+			
+			if interp.eval(self.condition):
+				print 'yay'
+			else:
+				print self.nay_block
+				#interp.eval(self.nay_block)
+					
+			#print self.yay_block
+			#print self.nay_block
 		
 		def __repr__(self):
 			return '<if>'
@@ -296,7 +324,7 @@ class Doubletalk(object):
 			# close statement
 			return False
 			
-	delimiters = "[.:!,;+*^&@#$%&'\"\-\\/\|=$()?<>\s]"
+	delimiters = "[\"\'.:!,;+*^&@#$%&\-\\/\|=$()?<>\s]"
 	
 	r_space 		= r'[ ]'
 	r_newline		= r'[\n]'
@@ -311,18 +339,18 @@ class Doubletalk(object):
 	r_hash 			= r'[#]'
 	r_exclamation 	= r'[!]'
 	r_question		= r'[?]'
+	r_double_quote 	= r'[\"]'
+	r_single_quote 	= r"[\']"
 	r_number 		= r'^[0-9]+'
 	r_identifier 	= r'[_a-zA-Z][_a-zA-Z0-9]*'
 	r_atsign		= r'[@]'
-	r_double_quote 	= r'["]'
-	r_single_quote 	= r'[\']'
 	
 	symbols = {
 		r_space: 			lambda t: Doubletalk.Space(t),
 		r_newline:			lambda t: Doubletalk.NewLine(t),
 		r_tab:				lambda t: Doubletalk.Tab(t),
-		r_double_quote: 	lambda t: Doubletalk.String(t),
-		r_single_quote: 	lambda t: Doubletalk.String(t),
+		r_double_quote: 	lambda t: Doubletalk.DoubleQuote(t),
+		r_single_quote: 	lambda t: Doubletalk.SingleQuote(t),
 		r_parentheses_l: 	lambda t: Doubletalk.Parentheses(t, open=True),
 		r_parentheses_r:	lambda t: Doubletalk.Parentheses(t, open=False),
 		r_slash: {
@@ -357,9 +385,7 @@ class Doubletalk(object):
 		}
 	}
 
-	
 
-	
 class Lexer(object):
 
 	class Token(object):
@@ -441,7 +467,7 @@ class Lexer(object):
 			# get next symbol
 			token = self.scan()
 			#info,symbol = self.scan()
-
+			
 			# EOF				
 			if token is None:
 				return False
@@ -580,6 +606,14 @@ class Parser(object):
 					#print 'Taking keyword route'
 					block.append(lexeme.parse(self, keyword=lexeme))
 					continue
+				
+				# literals
+				if isinstance(lexeme, (self.lang.DoubleQuote, self.lang.SingleQuote)):
+					if isinstance(lexeme, self.lang.DoubleQuote):
+						statement.append(''.join(self.verbatim(self.lang.DoubleQuote)))
+					else:
+						statement.append(''.join(self.verbatim(self.lang.SingleQuote)))
+					continue
 			
 				# try to push to an expression	
 				if not statement.push(lexeme):
@@ -591,13 +625,13 @@ class Parser(object):
 						# push built statement
 						block.append(statement)
 						continue
-					else:
-						print statement
-						raise Exception("Unexpected '%s' in line %s" % (lexeme.token.word, lexeme.token.line))
-						break
+					# first lexeme in instruction couldn't be pushed, so there is an error
+					#else:
+					#	print 'Expecting %s' % ([z for z in statement.grammar.keys()])
+					#	raise Exception("Unexpected '%s' in line %s" % (lexeme.lextype(), lexeme.token.line))
+					#	break
 		except Exception as e:
-			print e
-			exit(1)
+			raise
 			
 		return block
 	
