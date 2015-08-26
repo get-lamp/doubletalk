@@ -1,4 +1,4 @@
-from dt import *
+from parser import *
 
 OPERAND_L	= 0
 OPERATOR 	= 1
@@ -8,6 +8,7 @@ class Interpreter(object):
 
 	class Memory(object):
 		def __init__(self):
+			self.instr 	= []
 			self.stack	= []
 			self.heap 	= {}	
 
@@ -15,27 +16,34 @@ class Interpreter(object):
 		self.parser = Parser(Doubletalk(), 'test.dtk')
 		self.lang	= self.parser.lang
 		self.memory	= Interpreter.Memory()
+		self.pntr 	= 0
+
+	def load(self):
+		while True:
+			instr = self.parser.parse()
+		
+			if instr is False:
+				return False
+
+			gtree = self.parser.build(instr)
+			
+			# append to instruction memory block
+			self.memory.instr.append(gtree)
 			
 	def read(self):
-		inst = self.parser.parse()
+
+		try:
+			print '%s: %s' % (self.pntr, self.memory.instr[self.pntr])
+			
+
+			#r = self.eval(self.memory.instr[self.pntr])
 		
-		if inst is False:
+
+		except IndexError as ie:
 			return False
-		
-		print inst
+		self.pntr += 1
+		return r
 
-		tree = self.parser.build(inst)
-		
-		print tree
-		
-		#print '-' * 80
-		print self.eval(tree)
-
-		#print self.memory.heap
-		
-				
-		return tree
-	
 	def getval(self, i, **kwargs):
 
 		if isinstance(i, self.lang.Identifier):
@@ -56,19 +64,18 @@ class Interpreter(object):
 				if isinstance(v, list):
 					i[k] = self.eval(v)
 					
+			# a keyword
+			if isinstance(i[OPERAND_L], self.lang.Keyword):
+				i[OPERAND_L].eval(self)
 			# a value
 			if len(i) < 2:
 				return i.pop()
-			# an instruction
+			
+			# a binary operation
+			if isinstance(i[OPERATOR], self.lang.Assign):
+				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.memory.heap)
 			else:
-				# a keyword
-				if isinstance(i[OPERAND_L], self.lang.Keyword):
-					i[OPERAND_L].eval(i[1:])
-				# a binary operation
-				elif isinstance(i[OPERATOR], self.lang.Assign):
-					return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.memory.heap)
-				else:
-					return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.memory.heap)
+				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.memory.heap)
 				
 		else:
 			return i
