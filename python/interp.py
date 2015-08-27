@@ -21,7 +21,10 @@ class Interpreter(object):
 	def load(self):
 		while True:
 			instr = self.parser.parse()
+			
+			print instr
 		
+			exit(0)
 			if instr is False:
 				return False
 

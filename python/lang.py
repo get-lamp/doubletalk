@@ -72,11 +72,27 @@ class Doubletalk(object):
 		'include':	lambda t: Doubletalk.Include(t)
 	}
 
-	statement = {
-		r'<delim>': lambda: Doubletalk.statement,
+	expression = {
+		r'<delim>': lambda: Doubletalk.expression,
 		r'<const>|<ident>': {
-			'<op>': lambda: Doubletalk.statement,
-			'</delim>': lambda: Doubletalk.statement[r'<const>|<ident>'],
+			'<op>': lambda: Doubletalk.expression,
+			'</delim>': lambda: Doubletalk.expression[r'<const>|<ident>'],
+		}
+	}
+	
+	statement = {
+		r'<prnt>': lambda: Doubletalk.expression,
+		r'<if>': {
+			r'<expression>': {
+				r'<then>': {
+					r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expression>'][r'<then>'],
+					r'<else>': {
+						r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expression>'][r'<then>'][r'<else>'],
+						r'<end>': None
+					},
+					r'<end>': None
+				}
+			}
 		}
 	}
 
@@ -375,32 +391,46 @@ class Doubletalk(object):
 	class Ego(Character):
 		pass
 
-	
-		
-	class Statement(list):
-		def __init__(self):
-			self.grammar = Doubletalk.statement
-			super(Doubletalk.Statement, self).__init__()
-		
+	class Grammar(list):
+		def __init__(self, rules):
+			self.grammar	= rules
+			self.legal 		= rules
+			super(Doubletalk.Grammar, self).__init__()
+			
+		def hint(self):
+			return self.legal.keys()
+			
 		def is_legal(self, i):
-	
-			for r in self.grammar:
-						
+			# iterate through currently legal words	
+			for r in self.legal:	
 				if re.match(r, i.lextype()):
 					return r
-					
 			return False
 
 		def push(self, i):
+			# if instruction begins, legal should point to all instruction set
 			if len(self) == 0:
-				self.grammar = Doubletalk.statement
+				self.legal = self.grammar
 				
 			l = self.is_legal(i)
 			# push term
 			if l:
-				self.grammar = self.grammar[l] if not callable(self.grammar[l]) else self.grammar[l]()
-				super(Doubletalk.Statement, self).append(i)	
-				return self	
-								
-			# close statement
+				self.legal = self.legal[l] if not callable(self.legal[l]) else self.legal[l]()
+				super(Doubletalk.Grammar, self).append(i)	
+				return self				
+			# close
 			return False
+		
+	class Statement(Grammar):
+		def __init__(self):
+			super(Doubletalk.Statement, self).__init__(Doubletalk.statement)
+		
+		def lextype(self):
+			return '<statement>'
+		
+	class Expression(Grammar):
+		def __init__(self):
+			super(Doubletalk.Expression, self).__init__(Doubletalk.expression)
+		
+		def lextype(self):
+			return '<expression>'

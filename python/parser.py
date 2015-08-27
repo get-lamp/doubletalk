@@ -167,8 +167,82 @@ class Parser(object):
 				verbatim.append(lexeme.token.word)
 
 		return False
+	
+	def statement(self):
+		pass
 		
-	def parse(self, until='<newline>'):
+	def expression(self):
+		pass
+	
+	def parse(self):
+		
+		block = []
+		statement = self.lang.Statement()
+		expression = self.lang.Expression()
+		parsing = None
+		
+		while True:
+			lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
+			
+			# EOF
+			if lexeme is False:
+				return False
+			
+			# preprocessor directives
+			if isinstance(lexeme, self.lang.Preprocessor):
+				if isinstance(lexeme, self.lang.CommentLine):
+					# skips until newline
+					self.verbatim(self.lang.NewLine)
+					continue
+				if isinstance(lexeme, self.lang.CommentBlock):
+					# skips until closed comment block
+					self.verbatim(self.lang.CommentBlock, open=False)
+					continue
+			
+			# ignore newline in an empty line
+			if isinstance(lexeme, self.lang.NewLine) and len(block) == 0 and len(statement) == 0:
+				continue
+					
+			# EOL
+			if isinstance(lexeme, self.lang.NewLine):
+				continue
+
+			# white space
+			if isinstance(lexeme, self.lang.WhiteSpace):
+				continue
+			
+			# statement
+			if statement.is_legal(lexeme) or '<statement>' in statement.hint():
+				if statement.push(lexeme):
+					print 'Accepted statement %s' % (lexeme.lextype())
+				else:
+					self.pending.append(lexeme)
+					print 'Rejected statement %s expecting %s' % (lexeme.lextype(), statement.hint()) 
+			
+			# expression
+			elif expression.is_legal(lexeme) or '<expression>' in statement.hint():
+				if expression.push(lexeme):
+					print 'Accepted expression %s' % (lexeme.lextype())
+				else:
+					self.pending.append(lexeme)
+					print 'Rejected expression %s expecting %s' % (lexeme.lextype(), expression.hint()) 
+					
+			elif len(statement) > 0:
+				print 'Clossing statement %s' % (lexeme.lextype())
+				block.append(statement)
+				break
+			elif len(expression) > 0:
+				print 'Clossing expression %s' % (lexeme.lextype())
+				block.append(expression)
+				break
+			else:
+				print 'Stoped at %s' % (lexeme.lextype())
+				raise Exception('Syntax error')
+		
+		return block
+			
+		
+	def _parse(self, until='<newline>'):
 	
 		block = []
 		statement = Doubletalk.Statement()

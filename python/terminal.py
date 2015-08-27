@@ -8,7 +8,10 @@ class Terminal:
 	def run(self):
 
 		self.interp.load();
-
+		
+		print self.interp.memory.instr
+		
+		"""
 		while True:
 			ch = self.getchar()
 
@@ -23,6 +26,7 @@ class Terminal:
 
 			#print '-' * 80
 			#print 'I: %s' % (instr)
+		"""
 		
 			
 
