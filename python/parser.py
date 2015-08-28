@@ -126,6 +126,7 @@ class Parser(object):
 		self.tree 	= []
 		self.pending = []
 		
+		
 	def unnest(self, s, stop, **kwargs):
 		n = []
 		while True and len(s) > 0:
@@ -137,6 +138,7 @@ class Parser(object):
 				
 				
 		return (s,n)
+		
 
 	def verbatim(self, stop, **kwargs):
 		verbatim = []
@@ -167,21 +169,12 @@ class Parser(object):
 				verbatim.append(lexeme.token.word)
 
 		return False
+		
 	
-	def statement(self):
-		pass
-		
-	def expression(self):
-		pass
+	def next(self):
 	
-	def parse(self):
-		
-		block = []
-		statement = self.lang.Statement()
-		expression = self.lang.Expression()
-		parsing = None
-		
 		while True:
+		
 			lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
 			
 			# EOF
@@ -194,14 +187,15 @@ class Parser(object):
 					# skips until newline
 					self.verbatim(self.lang.NewLine)
 					continue
+				
 				if isinstance(lexeme, self.lang.CommentBlock):
 					# skips until closed comment block
 					self.verbatim(self.lang.CommentBlock, open=False)
 					continue
 			
 			# ignore newline in an empty line
-			if isinstance(lexeme, self.lang.NewLine) and len(block) == 0 and len(statement) == 0:
-				continue
+			#if isinstance(lexeme, self.lang.NewLine) and len(block) == 0 and len(statement) == 0:
+			#	continue
 					
 			# EOL
 			if isinstance(lexeme, self.lang.NewLine):
@@ -211,36 +205,68 @@ class Parser(object):
 			if isinstance(lexeme, self.lang.WhiteSpace):
 				continue
 			
-			# statement
-			if statement.is_legal(lexeme) or '<statement>' in statement.hint():
-				if statement.push(lexeme):
-					print 'Accepted statement %s' % (lexeme.lextype())
-				else:
-					self.pending.append(lexeme)
-					print 'Rejected statement %s expecting %s' % (lexeme.lextype(), statement.hint()) 
+			break
 			
-			# expression
-			elif expression.is_legal(lexeme) or '<expression>' in statement.hint():
-				if expression.push(lexeme):
-					print 'Accepted expression %s' % (lexeme.lextype())
-				else:
-					self.pending.append(lexeme)
-					print 'Rejected expression %s expecting %s' % (lexeme.lextype(), expression.hint()) 
-					
-			elif len(statement) > 0:
-				print 'Clossing statement %s' % (lexeme.lextype())
-				block.append(statement)
-				break
-			elif len(expression) > 0:
-				print 'Clossing expression %s' % (lexeme.lextype())
-				block.append(expression)
-				break
-			else:
-				print 'Stoped at %s' % (lexeme.lextype())
-				raise Exception('Syntax error')
+		return lexeme
 		
-		return block
+	
+	def statement(self):
+	
+		statement = self.lang.Statement()
+	
+		while True:
+		
+			lexeme = self.next()
 			
+			# statement
+			if statement.push(lexeme):
+				print 'Accepted statement %s' % (lexeme.lextype())
+			elif '<expression>' in statement.hint():
+			
+				print 'Rejected statement %s expecting %s' % (lexeme, statement.hint())
+				self.pending.append(lexeme)
+				statement.push(self.expression())
+				break
+				
+		return statement
+	
+					
+	def expression(self):
+		
+		expression = self.lang.Expression()
+		
+		while True:
+		
+			lexeme = self.next()
+	
+			# expression
+			if expression.push(lexeme):
+				print 'Accepted expression %s' % (lexeme.lextype())
+			elif lexeme.lextype() in self.lang.statement:
+				
+				print 'Rejected expression %s expecting %s' % (lexeme, expression.hint()) 
+				self.pending.append(lexeme)
+				
+				#expression.push(self.expression())
+				break
+		
+		return expression
+	
+	
+	
+	def parse(self):
+		
+		block = []
+		lexeme = self.next()
+				
+		if isinstance(lexeme, self.lang.Keyword):
+			self.pending.append(lexeme)
+			return self.statement()
+		elif isinstance(lexeme, (self.lang.Delimiter, self.lang.Constant, self.lang.Identifier)):
+			self.pending.append(lexeme)
+			return self.expression()
+		
+		
 		
 	def _parse(self, until='<newline>'):
 	
