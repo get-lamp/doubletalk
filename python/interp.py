@@ -13,33 +13,38 @@ class Interpreter(object):
 			self.heap 	= {}	
 
 	def __init__(self):
-		self.parser = Parser(Doubletalk(), 'test.dtk')
-		self.lang	= self.parser.lang
-		self.memory	= Interpreter.Memory()
-		self.pntr 	= 0
+		self.parser 	= Parser(Doubletalk(), 'test.dtk')
+		self.lang		= self.parser.lang
+		self.memory		= Interpreter.Memory()
+		self.ctrl_stack	= [True]
+		self.pntr 		= 0
 
 	def load(self):
+	
 		while True:
 			instr = self.parser.parse()
 			
-			print instr
-		
-			exit(0)
-			if instr is False:
+			if instr is False or instr is None:
 				return False
 
+			#build grammar tree
 			gtree = self.parser.build(instr)
 			
 			# append to instruction memory block
 			self.memory.instr.append(gtree)
-			
-	def read(self):
+		
+	def execute(self):
 
 		try:
-			print '%s: %s' % (self.pntr, self.memory.instr[self.pntr])
+			# debugging
+			print 'Heap %s %s' % ('\t'*2, self.memory.heap)
+			print 'Stack %s %s' % ('\t'*2, self.memory.stack)
+			print 'Read %s %s' % ('\t'*2, self.ctrl_stack)
+			print 'Instruction is %s %s' % ('\t'*1, self.memory.instr[self.pntr])
 			
-
-			#r = self.eval(self.memory.instr[self.pntr])
+			print '-'*80
+			# eval the instructions	
+			r = self.eval(self.memory.instr[self.pntr])
 		
 
 		except IndexError as ie:
@@ -56,20 +61,50 @@ class Interpreter(object):
 		else:
 			return i
 	
+	def goto(self, n):
+		self.pntr = n;
+		
+	def stack(self):
+		return self.memory.stack[-1]
+	
+	def stack_push(self, v):
+		self.memory.stack.append(v)
+	
+	def stack_pull(self):
+		return self.memory.stack.pop()
+	
+	def is_read_enabled(self):
+		return self.ctrl_stack[-1]
+	
+	def toggle_read_enabled(self):
+		self.ctrl_stack[-1] = not self.ctrl_stack[-1]
+		
+	def push_read_enabled(self, boolean):
+		self.ctrl_stack.append(boolean)
+	
+	def pull_read_enabled(self):
+		return self.ctrl_stack.pop()
+	
 	def eval(self, i):
 	
 		if isinstance(i, list):
 			
-			if len(i) > 3:
-				raise Exception('Illegal statement in line %s' % (i[0].token.line))
-				
+			
+			# a control struct
+			if isinstance(i[OPERAND_L], self.lang.Control):
+				return i[OPERAND_L].eval(self, i[1:])
+		
+			if not self.is_read_enabled():
+				return None
+			
+			# a keyword
+			if isinstance(i[OPERAND_L], self.lang.Keyword):
+				return i[OPERAND_L].eval(self, i[1:])
+	
 			for k,v in enumerate(i):
 				if isinstance(v, list):
 					i[k] = self.eval(v)
-					
-			# a keyword
-			if isinstance(i[OPERAND_L], self.lang.Keyword):
-				i[OPERAND_L].eval(self)
+										
 			# a value
 			if len(i) < 2:
 				return i.pop()

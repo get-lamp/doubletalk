@@ -1,11 +1,25 @@
-if (a+b) == 1 then
-	a = 1
-	b = 2
-	c = 3
+prnt 'Ok'
+prnt 'Well...'
+
+a = (1 + 2) / 3
+b = 1
+
+if (a + b) == 2 
+	prnt 'yes'
+	z = 1
+	
+	if z == 1
+		prnt 'Also yes'
+	end
+	
+	prnt 'Anyways I say this'
+	
 else
-	prnt 'f0'
-	prnt 'f1'
-	prnt 'f2'
+	prnt 'no'
+	x = 99
 end
 
-prnt 'after'
+prnt x
+
+prnt 'And this is finally over'
+

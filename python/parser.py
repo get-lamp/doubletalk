@@ -4,11 +4,10 @@ from lang import *
 class Lexer(object):
 
 	class Token(object):
-		def __init__(self, line, char, word, func=None):
+		def __init__(self, line, char, word):
 			self.line = line
 			self.char = char
 			self.word = word
-			self.func = func
 
 		def __repr__(self):
 			return "Token(line=(%s)%s, char=(%s)%s, word=(%s)'%s'" % (type(self.line), self.line, type(self.char), self.char, type(self.word), self.word)
@@ -171,7 +170,9 @@ class Parser(object):
 		return False
 		
 	
-	def next(self):
+	def next(self, ignore=None):
+		
+		ignore = (self.lang.Space) if ignore is None else ignore
 	
 		while True:
 		
@@ -192,79 +193,114 @@ class Parser(object):
 					# skips until closed comment block
 					self.verbatim(self.lang.CommentBlock, open=False)
 					continue
-			
-			# ignore newline in an empty line
-			#if isinstance(lexeme, self.lang.NewLine) and len(block) == 0 and len(statement) == 0:
-			#	continue
+		
+			if isinstance(lexeme, ignore):
+				continue
 					
-			# EOL
-			if isinstance(lexeme, self.lang.NewLine):
-				continue
-
-			# white space
-			if isinstance(lexeme, self.lang.WhiteSpace):
-				continue
-			
 			break
 			
 		return lexeme
 		
 	
-	def statement(self):
+	def block(self, until=None):
 	
-		statement = self.lang.Statement()
-	
+		block = []
+		
 		while True:
 		
-			lexeme = self.next()
+			i = self.parse(until=until)
 			
-			# statement
-			if statement.push(lexeme):
-				print 'Accepted statement %s' % (lexeme.lextype())
-			elif '<expression>' in statement.hint():
+			if i is None:
+				raise Exception('Ajjj')
 			
-				print 'Rejected statement %s expecting %s' % (lexeme, statement.hint())
-				self.pending.append(lexeme)
-				statement.push(self.expression())
-				break
+			# EOF
+			if i is False:
+				# EOF before expected delimiter
+				if until is not None:
+					raise Exception('Unexpected EOF')
+				# return last statement
+				elif len(block) > 0:	
+					return block
+				else:
+					return False
+			# stop at delimiter
+			if isinstance(i, until):
+				self.delimiter = i
+				return block
+			# add instruction to block
+			else:
+				block.append(i)
 				
-		return statement
-	
 					
-	def expression(self):
+	def expression(self, until=None):
 		
 		expression = self.lang.Expression()
 		
 		while True:
 		
 			lexeme = self.next()
-	
-			# expression
-			if expression.push(lexeme):
-				print 'Accepted expression %s' % (lexeme.lextype())
-			elif lexeme.lextype() in self.lang.statement:
+			
+			# EOF
+			if lexeme is False:
+				# return last expression
+				if len(expression) > 0:
+					return expression
+				else:
+					return False
+			
+			# commit expression on newline or continue if expression is empty	
+			if isinstance(lexeme, self.lang.NewLine):
+				if len(expression) > 0:
+					return expression
+				else:
+					continue
+					
+			if until is not None and isinstance(lexeme, until):
+				return expression	
+			
+			# literals
+			if isinstance(lexeme, (self.lang.DoubleQuote, self.lang.SingleQuote)):
+				if isinstance(lexeme, self.lang.DoubleQuote):
+					string = ''.join(self.verbatim(self.lang.DoubleQuote))
+				else:
+					string = ''.join(self.verbatim(self.lang.SingleQuote))
 				
-				print 'Rejected expression %s expecting %s' % (lexeme, expression.hint()) 
+				t = self.lexer.Token(None, None, string)
+				l = self.lang.String(t)
+				expression.push(l)		
+				continue
+			
+			if self.lang.Grammar.is_legal(expression + [lexeme], self.lang.expression):
+				expression.push(lexeme)
+			else:
 				self.pending.append(lexeme)
-				
-				#expression.push(self.expression())
-				break
-		
+				raise Exception('Syntax error. Unexpected %s' % (lexeme))
+							
 		return expression
 	
 	
 	
-	def parse(self):
+	def parse(self, until=None):
 		
-		block = []
 		lexeme = self.next()
-				
+		
+		if lexeme is False:
+			return False
+			
+		if until is not None and isinstance(lexeme, until):
+			return lexeme
+					
 		if isinstance(lexeme, self.lang.Keyword):
-			self.pending.append(lexeme)
-			return self.statement()
+			#self.pending.append(lexeme)
+			return lexeme.parse(self)
+
 		elif isinstance(lexeme, (self.lang.Delimiter, self.lang.Constant, self.lang.Identifier)):
 			self.pending.append(lexeme)
 			return self.expression()
+
+		else:
+			# newline, tab & beyond
+			return self.parse(until=until)
 		
 		
 		

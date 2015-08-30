@@ -76,7 +76,7 @@ class Doubletalk(object):
 		r'<delim>': lambda: Doubletalk.expression,
 		r'<const>|<ident>': {
 			'<op>': lambda: Doubletalk.expression,
-			'</delim>': lambda: Doubletalk.expression[r'<const>|<ident>'],
+			'</delim>': lambda: Doubletalk.expression[r'<const>|<ident>']
 		}
 	}
 	
@@ -215,35 +215,11 @@ class Doubletalk(object):
 			return '<keyword>'
 		def __repr__(self):
 			return '<keyword %s>' % (self.token.word)
-
+	
 	# block delimiters
 	class Delimiter(Lexeme):
 		pass
 		
-	class End(Delimiter):
-		
-		def lextype(self):
-			return '<end>'
-
-		def __repr__(self):
-			return '<end>'
-	
-	class Then(Delimiter):
-		
-		def lextype(self):
-			return '<then>'
-
-		def __repr__(self):
-			return '<then>'
-
-	class Else(Delimiter):
-		
-		def lextype(self):
-			return '<else>'
-
-		def __repr__(self):
-			return '<else>'
-	
 	class Parentheses(Delimiter):
 		
 		def lextype(self):
@@ -275,79 +251,82 @@ class Doubletalk(object):
 			return '<prnt>'
 		
 		def parse(self, parser, **kwargs):
-			self.text = parser.build(parser.parse());
-			return self
+			text = parser.expression();
+			return [self, text]
 		
-		def eval(self, interp):
-			print interp.getval(interp.eval(self.text))
+		def eval(self, interp, expression):
+			print interp.getval(interp.eval(expression))
 
 		def __repr__(self):
 			return '<prnt>'
-
-	class If(Keyword):
+	
+	class Control(object):
+		pass
+	
+	class If(Keyword,Control):
 	
 		def __init__(self, token, **kwargs):
-			self.condition = None
-			self.yay_block = None
-			self.nay_block = None
 			super(Doubletalk.If, self).__init__(token)
 
 		def lextype(self):
 			return '<if>'
 
 		def parse(self, parser, **kwargs):
-			
-			#try:
-			"""
-			self.condition 	= parser.build(parser.parse(until=r'<then>'))
-			
-			print self.condition
-			print parser.delimiter.lextype()
-			print '-' * 80
-
-			self.yay_block	= parser.build(parser.parse(until=r'<else>|<end>'))
-
-			print self.yay_block
-			print parser.delimiter.lextype()
-			print '-' * 80
-
-
-
-			if parser.delimiter.lextype() == '<else>':
-				self.nay_block 	= parser.build(parser.parse(until=r'<end>'))
-
-				print self.nay_block
-				print parser.delimiter.lextype()
-				print '-' * 80
-
-
-			exit(0)
-			"""		
-			#except Exception as e:
-			#	print e
-			#	print 'Last delimiter:'
-			#	print parser.delimiter
-			#	print 'Last block parsed: '
-			#	print self.yay_block
-			#	exit(1)
+			# store condition pre-built
+			condition = parser.build(parser.expression(until=Doubletalk.Then))
+			return [self, condition]
 		
-			#return [[self, self.condition], [self.yay_block], [self.nay_block]]
-			
-			return self
 
-		def eval(self, interp):
-			
-			if interp.eval(self.condition):
-				print 'yay'
-			else:
-				print self.nay_block
-				#interp.eval(self.nay_block)
-					
-			#print self.yay_block
-			#print self.nay_block
-		
+		def eval(self, interp, expr):
+			interp.push_read_enabled(bool(interp.eval(expr)))
+	
 		def __repr__(self):
 			return '<if>'
+	
+	class Then(Keyword,Control):
+		
+		def lextype(self):
+			return '<then>'
+			
+		def parse(self, parser, **kwargs):
+			#block = parser.parse(until=(Doubletalk.Else, Doubletalk.End))
+			return [self]
+		
+		def eval(self, interp, expr):
+			interp.push_read_enabled(True if interp.stack() else False)
+
+		def __repr__(self):
+			return '<then>'
+
+	class Else(Keyword,Control):
+		
+		def lextype(self):
+			return '<else>'
+		
+		def parse(self, parser, **kwargs):
+			#block = parser.parse(until=Doubletalk.End)
+			return [self]
+			
+		def eval(self, interp, expr):
+			interp.toggle_read_enabled()
+
+		def __repr__(self):
+			return '<else>'
+	
+	class End(Keyword,Control):
+		
+		def lextype(self):
+			return '<end>'
+			
+		def parse(self, parser, **kwargs):
+			#block = parser.parse(until=Doubletalk.End)
+			return [self]
+		
+		def eval(self, interp, expr):
+			interp.pull_read_enabled()
+
+		def __repr__(self):
+			return '<end>'
 
 	#preprocesor
 	class Preprocessor(Lexeme):
@@ -396,11 +375,46 @@ class Doubletalk(object):
 			self.grammar	= rules
 			self.legal 		= rules
 			super(Doubletalk.Grammar, self).__init__()
+		
+		# does lexeme belong to this grammar
+		@staticmethod
+		def belongs(i, grammar):
+			branch = grammar
+			# iterate through currently legal words	
+			for r in branch:	
+				if re.match(r, i.lextype()):
+					return True
+				elif branch.get(r, None) is not None:
+					branch = branch[r] if not callable(branch[r]) else branch[r]()
+					
+			return False
+		
+		@staticmethod
+		def is_legal(s, grammar):
+			rules = grammar
+			# iterate through words in sentence
+			for i in s:
+				# iterate through currently legal words	
+				found = False
+				for r in rules:
+					if re.match(r, i.lextype()):
+						rules = rules[r] if not callable(rules[r]) else rules[r]()
+						found = True
+						break
+						
+				if not found:
+					return False
+			return True
+		
+		
 			
 		def hint(self):
-			return self.legal.keys()
-			
-		def is_legal(self, i):
+			if self.legal is None:
+				return None
+			else:
+				return self.legal.keys()
+		
+		def can_push(self, i):
 			# iterate through currently legal words	
 			for r in self.legal:	
 				if re.match(r, i.lextype()):
@@ -412,12 +426,15 @@ class Doubletalk(object):
 			if len(self) == 0:
 				self.legal = self.grammar
 				
-			l = self.is_legal(i)
+			l = self.can_push(i)
+			#print 'Is legal %s? %s %s %s' % (self.__class__.__name__, i.lextype(), self.hint(), l)
 			# push term
 			if l:
+				# climb up in grammar tree
 				self.legal = self.legal[l] if not callable(self.legal[l]) else self.legal[l]()
 				super(Doubletalk.Grammar, self).append(i)	
-				return self				
+				return self
+				
 			# close
 			return False
 		

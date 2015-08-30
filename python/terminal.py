@@ -5,28 +5,24 @@ class Terminal:
 	def __init__(self):
 		self.interp = Interpreter()
 
-	def run(self):
+	def begin(self):
 
 		self.interp.load();
 		
-		print self.interp.memory.instr
-		
-		"""
 		while True:
 			ch = self.getchar()
 
 			if ch == 'q':
 				break
 				
-			instr = self.interp.read()
+			instr = self.interp.execute()
 			
 			if instr is False:
 				print 'EOF'
 				break
 
-			#print '-' * 80
-			#print 'I: %s' % (instr)
-		"""
+			print '-' * 80
+		
 		
 			
 
@@ -42,7 +38,7 @@ class Terminal:
 			return ch
    
 T = Terminal()
-T.run()
+T.begin()
 
 
 
