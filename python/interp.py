@@ -56,9 +56,11 @@ class Interpreter(object):
 		return r
 
 
+	# absolute addressing
 	def goto(self, n):
 		self.pntr = n;
 	
+	# relative addressing
 	def move(self, i):
 		self.pntr += i
 	
@@ -67,28 +69,26 @@ class Interpreter(object):
 		# push func call to stack
 		self.stack_push({'ret_addr': self.pntr, 'kwargs': kwargs})
 		# enable reading func block
-		self.push_read_enabled(True)
 		self.push_block('<proc>')
 		self.goto(self.memory.heap[identifier])
 	
 	def endblock(self):
-		self.pull_read_enabled()
 		self.pull_block()
 		
 	def endproc(self):
-		if self.is_read_enabled():
-			stack = self.stack_pull()
-			ret_addr = stack.get('ret_addr', None)
 		
-			if ret_addr is None:
-				raise Exception('Return address missing')
+		stack = self.stack_pull()
+		ret_addr = stack.get('ret_addr', None)
 		
-			self.endblock()
-			self.goto(ret_addr)	
-		else:
-			self.endblock()	
+		if ret_addr is None:
+			raise Exception('Return address missing')
+		
+		self.endblock()
+		self.goto(ret_addr)	
+			
 			
 	def endif(self):
+		self.pull_read_enabled()
 		self.endblock()
 		
 	def block(self):

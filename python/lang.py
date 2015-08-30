@@ -12,6 +12,7 @@ class Doubletalk(object):
 	r_tab 			= r'[\t]'
 	r_slash 		= r'[/]'
 	r_asterisk 		= r'[*]'
+	r_comma 		= r'[,]'
 	r_equal 		= r'[=]'
 	r_plus 			= r'[+]'
 	r_dash 			= r'[-]'
@@ -43,6 +44,7 @@ class Doubletalk(object):
 			r_slash:		lambda t: Doubletalk.CommentBlock(t, open=False),
 			None:			lambda t: Doubletalk.Multiply(t)
 		},
+		r_comma: 			lambda t: Doubletalk.Comma(t),
 		r_bang: {
 			r_equal: {
 				r_equal:	lambda t: Doubletalk.InequalStrict(t),
@@ -88,7 +90,8 @@ class Doubletalk(object):
 		r'<delim>': lambda: Doubletalk.expression,
 		r'<const>|<ident>': {
 			'<op>': lambda: Doubletalk.expression,
-			'</delim>': lambda: Doubletalk.expression[r'<const>|<ident>']
+			'</delim>': lambda: Doubletalk.expression[r'<const>|<ident>'],
+			'<comma>': lambda: Doubletalk.expression
 		}
 	}
 	
@@ -226,6 +229,15 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<delim>' if self.open else '</delim>'
 	
+	# list delimiter
+	class Comma(Delimiter):
+		
+		def lextype(self):
+			return '<comma>'
+
+		def __repr__(self):
+			return '<comma>'
+	
 	# string delimiters
 	class DoubleQuote(Delimiter):
 		
@@ -267,16 +279,22 @@ class Doubletalk(object):
 			return '<proc>'
 		
 		def parse(self, parser, **kwargs):
-			identifier = parser.build(parser.expression())		
+			#identifier = parser.build(parser.expression())	
+			
+			identifier = [parser.next()]
+			
+			#print identifier
+			
+			#signature = parser.build(parser.expression())
+			
+			#print signature
+			
+			#exit(1)	
 			return [self, identifier]
 		
 		def eval(self, interp, expr):
 			
 			print "Procedure is being eval'd"
-			
-			# disable reading of function block
-			#interp.push_read_enabled(False)	
-			#interp.push_block('<proc>')
 		
 			identifier = interp.getval(expr, ref=True)
 			# store identifier & memory address

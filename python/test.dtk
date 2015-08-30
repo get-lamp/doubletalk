@@ -1,3 +1,12 @@
+// test
+/*
+proc test a,(b + 2),c
+	prnt a
+	prnt b
+	prnt c
+end
+*/
+
 prnt 'Begin'
 proc a_test_procedure	
 	proc nested_procedure
@@ -18,16 +27,13 @@ proc a_test_procedure
 	prnt 'leaving now. But before that...'
 	exec nested_procedure
 end 
+
 if True
 	exec a_test_procedure
 	prnt 'And so the function was executed'
 else:
 	prnt 'Function was not executed'
 end
-
-
-
-
 
 /*
 

@@ -126,9 +126,14 @@ class Parser(object):
 		self.tree 		= []
 		self.pending	= []
 		self.blocks		= ['<main>']
+	
+	def EOF(self):
+		if len(self.blocks) > 1:
+			raise Exception('Missing end statement')
+	
+		return False
 		
-		
-	def unnest(self, s, stop, **kwargs):
+	def unnest(self, s, stop):
 		n = []
 		while True and len(s) > 0:
 			i = s.pop(-1)
@@ -236,7 +241,9 @@ class Parser(object):
 			else:
 				block.append(i)
 				
-					
+	def list(self):
+		pass
+				
 	def expression(self, until=None):
 		
 		expression = self.lang.Expression()
@@ -261,7 +268,11 @@ class Parser(object):
 					continue
 					
 			if until is not None and isinstance(lexeme, until):
-				return expression	
+				return expression
+			
+			if isinstance(lexeme, self.lang.Comma):
+				print expression
+				exit(0)	
 			
 			# literals
 			if isinstance(lexeme, (self.lang.DoubleQuote, self.lang.SingleQuote)):
@@ -279,6 +290,8 @@ class Parser(object):
 				expression.push(lexeme)
 			else:
 				self.pending.append(lexeme)
+				print 'Parsed %s' % (expression)
+				print 'Expecting %s' % (expression.hint())
 				raise Exception('Syntax error. Unexpected %s' % (lexeme))
 							
 		return expression
@@ -290,7 +303,7 @@ class Parser(object):
 		lexeme = self.next()
 		
 		if lexeme is False:
-			return False
+			return self.EOF()
 			
 		if until is not None and isinstance(lexeme, until):
 			return lexeme
@@ -321,9 +334,9 @@ class Parser(object):
 	
 	def build(self, s=None):
 		
-		# if s is None, parse self. That is the root
+		# s as sentence. Ff s is None, parse self, that is: the root
 		s = s if s is not None else self
-		t = []
+		# n as the node we are building
 		n = []
 		
 		# get rid of superfluous nesting
@@ -333,16 +346,15 @@ class Parser(object):
 		while s and len(s) > 0:
 			
 			i = s.pop(0)
-			# grouping
+			# math grouping
 			if isinstance(i, self.lang.Parentheses):
 				if i.open:
 					# n is the i(n)ner node while s is the remaining (i)nstruction
-					n,s = self.unnest(s, self.lang.Parentheses, open=False)
+					n,s = self.unnest(s, self.lang.Parentheses)
 					if len(n) > 0:
 						n = self.build(n)						
 				else:
 					raise Exception('Unexpected parentheses at %s' % (i.token.line))
-			
 			# operator delimits terms
 			elif isinstance(i, self.lang.Operator):
 				return [n, i, self.build(s)]
