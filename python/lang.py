@@ -96,6 +96,8 @@ class Doubletalk(object):
 		def __init__(self, token, **kwargs):
 			self.token = token
 			self.set(kwargs)
+			self.length = 0
+			self.owner = None
 
 		def set(self, kwargs):
 			for i in kwargs:
@@ -242,18 +244,24 @@ class Doubletalk(object):
 			return '<s-quote>'
 
 	# keywords
+	class Block(object):
+		# def begin
+		# def end
+		# def length
+		pass
+			
 	class Control(object):
 		pass
 		
 	class Keyword(Lexeme):
-	
+		
 		def lextype(self):
 			return '<keyword>'
 			
 		def __repr__(self):
 			return '<keyword %s>' % (self.token.word)
 	
-	class Proc(Keyword,Control):
+	class Proc(Keyword,Block,Control):
 		
 		def lextype(self):
 			return '<proc>'
@@ -267,14 +275,14 @@ class Doubletalk(object):
 			print "Procedure is being eval'd"
 			
 			# disable reading of function block
-			interp.push_read_enabled(False)	
-			
-			interp.push_block('<proc>')
+			#interp.push_read_enabled(False)	
+			#interp.push_block('<proc>')
 		
 			identifier = interp.getval(expr, ref=True)
 			# store identifier & memory address
 			interp.memory.heap[interp.eval(identifier).label] = interp.pntr
-			
+					
+			interp.move(self.length+1)
 				
 	
 	class Exec(Keyword):
@@ -308,7 +316,7 @@ class Doubletalk(object):
 			return '<prnt>'
 	
 
-	class If(Keyword,Control):
+	class If(Keyword,Block,Control):
 	
 		def __init__(self, token, **kwargs):
 			super(Doubletalk.If, self).__init__(token)

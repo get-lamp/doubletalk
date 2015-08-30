@@ -120,10 +120,12 @@ class Lexer(object):
 class Parser(object):
 
 	def __init__(self, lang, source, is_file=True):
-		self.lang	= lang
-		self.lexer 	= Lexer(lang, source, is_file)
-		self.tree 	= []
-		self.pending = []
+		self.count		= 0
+		self.lang		= lang
+		self.lexer 		= Lexer(lang, source, is_file)
+		self.tree 		= []
+		self.pending	= []
+		self.blocks		= ['<main>']
 		
 		
 	def unnest(self, s, stop, **kwargs):
@@ -135,9 +137,15 @@ class Parser(object):
 			else:
 				n.insert(0, i)
 				
-				
 		return (s,n)
-		
+	
+	def push_block(self, block):
+		self.blocks.append(block)
+	
+	def pull_block(self):
+		if len(self.blocks) <= 1:
+			raise Exception('Cannot pull main block')
+		return self.blocks.pop()
 
 	def verbatim(self, stop, **kwargs):
 		verbatim = []
@@ -172,7 +180,7 @@ class Parser(object):
 	
 	def next(self, ignore=None):
 		
-		ignore = (self.lang.Space) if ignore is None else ignore
+		ignore = (self.lang.Space, self.lang.Tab) if ignore is None else ignore
 	
 		while True:
 		
@@ -286,13 +294,23 @@ class Parser(object):
 			
 		if until is not None and isinstance(lexeme, until):
 			return lexeme
-					
+							
 		if isinstance(lexeme, self.lang.Keyword):
-			#self.pending.append(lexeme)
+			if isinstance(lexeme, self.lang.Block):
+				self.push_block((self.count, lexeme))
+			elif isinstance(lexeme, self.lang.Delimiter):
+				p0, b = self.pull_block()
+				lexeme.owner, b.length = (b, self.count - p0 - 1)
+			
+			# add to instruction counter
+			self.count += 1
 			return lexeme.parse(self)
 
 		elif isinstance(lexeme, (self.lang.Delimiter, self.lang.Constant, self.lang.Identifier)):
 			self.pending.append(lexeme)
+			
+			# add to instruction counter
+			self.count += 1
 			return self.expression()
 
 		else:

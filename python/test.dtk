@@ -1,9 +1,5 @@
-
-
 prnt 'Begin'
-
-proc a_test_procedure
-	
+proc a_test_procedure	
 	proc nested_procedure
 		prnt 'Im defining a procedure here'
 		if True:
@@ -11,7 +7,6 @@ proc a_test_procedure
 		end
 		prnt 'Nested procedure ends here'
 	end
-
 	prnt 'Im working'
 	j = 2
 	prnt 'Im working too'
@@ -21,11 +16,8 @@ proc a_test_procedure
 		prnt 'j is not 2'
 	end
 	prnt 'leaving now. But before that...'
-	
 	exec nested_procedure
-	
 end 
-
 if True
 	exec a_test_procedure
 	prnt 'And so the function was executed'

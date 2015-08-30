@@ -59,6 +59,9 @@ class Interpreter(object):
 	def goto(self, n):
 		self.pntr = n;
 	
+	def move(self, i):
+		self.pntr += i
+	
 	def call(self, identifier, **kwargs):
 		print 'Calling procedure %s' % (identifier)
 		# push func call to stack
