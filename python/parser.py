@@ -209,10 +209,7 @@ class Parser(object):
 		while True:
 		
 			i = self.parse(until=until)
-			
-			if i is None:
-				raise Exception('Ajjj')
-			
+						
 			# EOF
 			if i is False:
 				# EOF before expected delimiter
@@ -303,94 +300,6 @@ class Parser(object):
 			return self.parse(until=until)
 		
 		
-		
-	def _parse(self, until='<newline>'):
-	
-		block = []
-		statement = Doubletalk.Statement()
-		self.delimiter = None
-		
-		try:
-			while True:
-				lexeme = self.pending.pop() if len(self.pending) > 0 else self.lexer.next()
-			
-				# EOF
-				if lexeme is False:
-					# EOF while looking for a delimiter?
-					if until != '<newline>':
-						raise Exception('Unexpected end of file. Missing %s' % (until))
-					else:
-						return False
-			
-				# preprocessor directives
-				if isinstance(lexeme, self.lang.Preprocessor):
-					if isinstance(lexeme, self.lang.CommentLine):
-						# skips until newline
-						self.verbatim(self.lang.NewLine)
-						continue
-					if isinstance(lexeme, self.lang.CommentBlock):
-						# skips until closed comment block
-						self.verbatim(self.lang.CommentBlock, open=False)
-						continue
-			
-				# ignore newline in an empty line
-				if isinstance(lexeme, self.lang.NewLine) and len(block) == 0 and len(statement) == 0:
-					continue
-				
-				# stop character
-				#print 'Testing %s against %s' % (until, lexeme.lextype())
-				if re.match(until, lexeme.lextype()):
-					self.delimiter = lexeme
-					# what is this?
-					if len(statement) > 0:	
-						block.append(statement)
-					break
-				
-				# EOL
-				if isinstance(lexeme, self.lang.NewLine):
-					continue
-
-				# white space
-				if isinstance(lexeme, self.lang.WhiteSpace):
-					continue
-			
-				print 'Found: %s' % (lexeme)
-
-				# literals
-				if isinstance(lexeme, (self.lang.DoubleQuote, self.lang.SingleQuote)):
-					if isinstance(lexeme, self.lang.DoubleQuote):
-						statement.append(''.join(self.verbatim(self.lang.DoubleQuote)))
-					else:
-						statement.append(''.join(self.verbatim(self.lang.SingleQuote)))
-					continue
-				
-				# keywords
-				if isinstance(lexeme, self.lang.Keyword):
-					#print 'Taking keyword route'
-					block.append(lexeme.parse(self, keyword=lexeme))
-					break
-				
-				# try to push to an expression	
-				if not statement.push(lexeme):
-					print 'Rejected: %s' % (lexeme)
-					# word may belong to next instruction
-					self.pending.append(lexeme)
-					statement = Doubletalk.Statement()
-					if len(statement) > 0:
-						# push built statement
-						block.append(statement)
-						continue
-					# first lexeme in instruction couldn't be pushed, so there is an error
-					#else:
-					#	print 'Expecting %s' % ([z for z in statement.grammar.keys()])
-					#	raise Exception("Unexpected '%s' in line %s" % (lexeme.lextype(), lexeme.token.line))
-					#	break
-			print block
-
-		except Exception as e:
-			raise
-			
-		return block
 	
 	def build(self, s=None):
 		

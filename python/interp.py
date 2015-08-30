@@ -13,11 +13,12 @@ class Interpreter(object):
 			self.heap 	= {}	
 
 	def __init__(self):
-		self.parser 	= Parser(Doubletalk(), 'test.dtk')
-		self.lang		= self.parser.lang
-		self.memory		= Interpreter.Memory()
-		self.ctrl_stack	= [True]
-		self.pntr 		= 0
+		self.parser 		= Parser(Doubletalk(), 'test.dtk')
+		self.lang			= self.parser.lang
+		self.memory			= Interpreter.Memory()
+		self.ctrl_stack		= [True]
+		self.block_stack	= ['<main>']
+		self.pntr 			= 0
 
 	def load(self):
 	
@@ -37,6 +38,8 @@ class Interpreter(object):
 
 		try:
 			# debugging
+			print 'Pntr %s %s' % ('\t'*2, self.pntr)
+			print 'Block %s %s' % ('\t'*2, self.block_stack)
 			print 'Heap %s %s' % ('\t'*2, self.memory.heap)
 			print 'Stack %s %s' % ('\t'*2, self.memory.stack)
 			print 'Read %s %s' % ('\t'*2, self.ctrl_stack)
@@ -52,18 +55,48 @@ class Interpreter(object):
 		self.pntr += 1
 		return r
 
-	def getval(self, i, **kwargs):
 
-		if isinstance(i, self.lang.Identifier):
-			return i.eval(self.memory.heap)
-		elif isinstance(i, self.lang.Constant):
-			return i.eval()
-		else:
-			return i
-	
 	def goto(self, n):
 		self.pntr = n;
+	
+	def call(self, identifier, **kwargs):
+		print 'Calling procedure %s' % (identifier)
+		# push func call to stack
+		self.stack_push({'ret_addr': self.pntr, 'kwargs': kwargs})
+		# enable reading func block
+		self.push_read_enabled(True)
+		self.push_block('<proc>')
+		self.goto(self.memory.heap[identifier])
+	
+	def endblock(self):
+		self.pull_read_enabled()
+		self.pull_block()
 		
+	def endproc(self):
+		if self.is_read_enabled():
+			stack = self.stack_pull()
+			ret_addr = stack.get('ret_addr', None)
+		
+			if ret_addr is None:
+				raise Exception('Return address missing')
+		
+			self.endblock()
+			self.goto(ret_addr)	
+		else:
+			self.endblock()	
+			
+	def endif(self):
+		self.endblock()
+		
+	def block(self):
+		return self.block_stack[-1]
+	
+	def push_block(self, block):
+		self.block_stack.append(block)
+	
+	def pull_block(self):
+		return self.block_stack.pop()
+	
 	def stack(self):
 		return self.memory.stack[-1]
 	
@@ -77,18 +110,46 @@ class Interpreter(object):
 		return self.ctrl_stack[-1]
 	
 	def toggle_read_enabled(self):
-		self.ctrl_stack[-1] = not self.ctrl_stack[-1]
+		# if parent block isn't executable, child blocks aren't neither
+		if not self.ctrl_stack[-1:][0]: 
+			self.ctrl_stack[-1] = False
+		else:
+			self.ctrl_stack[-1] = not self.ctrl_stack[-1]
 		
 	def push_read_enabled(self, boolean):
-		self.ctrl_stack.append(boolean)
+		# if parent block isn't executable, child blocks aren't neither
+		if not self.is_read_enabled():
+			self.ctrl_stack.append(False)
+		else:
+			self.ctrl_stack.append(boolean)
 	
 	def pull_read_enabled(self):
 		return self.ctrl_stack.pop()
 	
+	def getval(self, i, **kwargs):
+
+		# it's nested
+		if isinstance(i, list):	
+			return self.getval(i.pop(), **kwargs)
+		# identifiers
+		if isinstance(i, self.lang.Identifier):
+			
+			# return memory address identifier
+			if kwargs.get('ref', None) is not None:
+				return i
+			# return value in memory
+			else:
+				return i.eval(self.memory.heap)
+		# constants
+		elif isinstance(i, self.lang.Constant):
+			return i.eval()
+		# a value
+		else:
+			return i
+	
 	def eval(self, i):
 	
 		if isinstance(i, list):
-			
 			
 			# a control struct
 			if isinstance(i[OPERAND_L], self.lang.Control):
@@ -101,6 +162,7 @@ class Interpreter(object):
 			if isinstance(i[OPERAND_L], self.lang.Keyword):
 				return i[OPERAND_L].eval(self, i[1:])
 	
+			# expressions
 			for k,v in enumerate(i):
 				if isinstance(v, list):
 					i[k] = self.eval(v)
@@ -109,9 +171,10 @@ class Interpreter(object):
 			if len(i) < 2:
 				return i.pop()
 			
-			# a binary operation
+			# assign operations
 			if isinstance(i[OPERATOR], self.lang.Assign):
 				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.memory.heap)
+			# any other binary operation
 			else:
 				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.memory.heap)
 				

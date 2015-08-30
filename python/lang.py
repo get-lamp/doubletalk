@@ -1,5 +1,8 @@
 import StringIO, re
 
+# 	TODO 
+#	better string handling
+
 class Doubletalk(object):
 
 	delimiters = "[\"\'.:!,;+*^&@#$%&\-\\/\|=$()?<>\s]"
@@ -15,7 +18,7 @@ class Doubletalk(object):
 	r_parentheses_l = r'[(]'
 	r_parentheses_r	= r'[)]'
 	r_hash 			= r'[#]'
-	r_exclamation 	= r'[!]'
+	r_bang 			= r'[!]'
 	r_question		= r'[?]'
 	r_double_quote 	= r'[\"]'
 	r_single_quote 	= r"[\']"
@@ -39,6 +42,13 @@ class Doubletalk(object):
 		r_asterisk: {
 			r_slash:		lambda t: Doubletalk.CommentBlock(t, open=False),
 			None:			lambda t: Doubletalk.Multiply(t)
+		},
+		r_bang: {
+			r_equal: {
+				r_equal:	lambda t: Doubletalk.InequalStrict(t),
+				None:		lambda t: Doubletalk.Inequal(t)
+			},
+			None: 			lambda t: Doubletalk.Assign(t)
 		},
 		r_equal: {
 			r_equal: {
@@ -69,6 +79,8 @@ class Doubletalk(object):
 		'then':		lambda t: Doubletalk.Then(t),
 		'else':		lambda t: Doubletalk.Else(t),
 		'end':		lambda t: Doubletalk.End(t),
+		'proc':		lambda t: Doubletalk.Proc(t),
+		'exec':		lambda t: Doubletalk.Exec(t),
 		'include':	lambda t: Doubletalk.Include(t)
 	}
 
@@ -80,22 +92,6 @@ class Doubletalk(object):
 		}
 	}
 	
-	statement = {
-		r'<prnt>': lambda: Doubletalk.expression,
-		r'<if>': {
-			r'<expression>': {
-				r'<then>': {
-					r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expression>'][r'<then>'],
-					r'<else>': {
-						r'<statement>': lambda: Doubletalk.statement[r'<if>'][r'<expression>'][r'<then>'][r'<else>'],
-						r'<end>': None
-					},
-					r'<end>': None
-				}
-			}
-		}
-	}
-
 	class Lexeme(object):
 		def __init__(self, token, **kwargs):
 			self.token = token
@@ -182,7 +178,14 @@ class Doubletalk(object):
 		def eval(self, left, right, scope):
 			return left == right
 
+	class Inequal(Operator):
+		def eval(self, left, right, scope):
+			return left != right
+
 	class EqualStrict(Operator):
+		pass
+	
+	class InequalStrict(Operator):
 		pass
 
 	class Subtract(Operator):
@@ -209,13 +212,6 @@ class Doubletalk(object):
 		def eval(self, left, right, scope):
 			return left * right
 
-	# keywords
-	class Keyword(Lexeme):
-		def lextype(self):
-			return '<keyword>'
-		def __repr__(self):
-			return '<keyword %s>' % (self.token.word)
-	
 	# block delimiters
 	class Delimiter(Lexeme):
 		pass
@@ -228,6 +224,7 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<delim>' if self.open else '</delim>'
 	
+	# string delimiters
 	class DoubleQuote(Delimiter):
 		
 		def lextype(self):
@@ -245,13 +242,63 @@ class Doubletalk(object):
 			return '<s-quote>'
 
 	# keywords
+	class Control(object):
+		pass
+		
+	class Keyword(Lexeme):
+	
+		def lextype(self):
+			return '<keyword>'
+			
+		def __repr__(self):
+			return '<keyword %s>' % (self.token.word)
+	
+	class Proc(Keyword,Control):
+		
+		def lextype(self):
+			return '<proc>'
+		
+		def parse(self, parser, **kwargs):
+			identifier = parser.build(parser.expression())		
+			return [self, identifier]
+		
+		def eval(self, interp, expr):
+			
+			print "Procedure is being eval'd"
+			
+			# disable reading of function block
+			interp.push_read_enabled(False)	
+			
+			interp.push_block('<proc>')
+		
+			identifier = interp.getval(expr, ref=True)
+			# store identifier & memory address
+			interp.memory.heap[interp.eval(identifier).label] = interp.pntr
+			
+				
+	
+	class Exec(Keyword):
+		
+		def lextype(self):
+			return '<exec>'
+		
+		def parse(self, parser, **kwargs):
+			label = parser.expression()
+			return [self, label]
+		
+		def eval(self, interp, expr):
+			
+			proc = expr.pop(0)
+			interp.call(proc[0].label)
+						
+			
 	class Prnt(Keyword):
 		
 		def lextype(self):
 			return '<prnt>'
 		
 		def parse(self, parser, **kwargs):
-			text = parser.expression();
+			text = parser.expression()
 			return [self, text]
 		
 		def eval(self, interp, expression):
@@ -260,9 +307,7 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<prnt>'
 	
-	class Control(object):
-		pass
-	
+
 	class If(Keyword,Control):
 	
 		def __init__(self, token, **kwargs):
@@ -279,6 +324,7 @@ class Doubletalk(object):
 
 		def eval(self, interp, expr):
 			interp.push_read_enabled(bool(interp.eval(expr)))
+			interp.push_block('<if>')
 	
 		def __repr__(self):
 			return '<if>'
@@ -313,7 +359,7 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<else>'
 	
-	class End(Keyword,Control):
+	class End(Keyword,Control,Delimiter):
 		
 		def lextype(self):
 			return '<end>'
@@ -323,7 +369,16 @@ class Doubletalk(object):
 			return [self]
 		
 		def eval(self, interp, expr):
-			interp.pull_read_enabled()
+		
+			block = interp.block()
+			
+			if block == '<if>':
+				interp.endif()
+			elif block == '<proc>':
+				print 'Ending procedure block'
+				interp.endproc()
+			else:
+				raise Exception('Unknown block type')
 
 		def __repr__(self):
 			return '<end>'
