@@ -2,10 +2,11 @@ import StringIO, re
 
 # 	TODO 
 #	better string handling
+#	weird delimiter characters behavior 
 
 class Doubletalk(object):
 
-	delimiters = "[\"\'.:!,;+*^&@#$%&\-\\/\|=$()?<>\s]"
+	delimiters = "[\"\'.:!,;+*^&@#$%&\-\\/\|=$()?<>\s\[\]]"
 	
 	r_space 		= r'[ ]'
 	r_newline		= r'[\n]'
@@ -16,6 +17,8 @@ class Doubletalk(object):
 	r_equal 		= r'[=]'
 	r_plus 			= r'[+]'
 	r_dash 			= r'[-]'
+	r_bracket_l 	= r'[\[]'
+	r_bracket_r		= r'[\]]'
 	r_parentheses_l = r'[(]'
 	r_parentheses_r	= r'[)]'
 	r_hash 			= r'[#]'
@@ -31,6 +34,8 @@ class Doubletalk(object):
 		r_space: 			lambda t: Doubletalk.Space(t),
 		r_newline:			lambda t: Doubletalk.NewLine(t),
 		r_tab:				lambda t: Doubletalk.Tab(t),
+		r_bracket_l: 		lambda t: Doubletalk.Bracket(t, open=True),
+		r_bracket_r:		lambda t: Doubletalk.Bracket(t, open=False),
 		r_double_quote: 	lambda t: Doubletalk.DoubleQuote(t),
 		r_single_quote: 	lambda t: Doubletalk.SingleQuote(t),
 		r_parentheses_l: 	lambda t: Doubletalk.Parentheses(t, open=True),
@@ -87,14 +92,15 @@ class Doubletalk(object):
 	}
 
 	expression = {
-		r'<delim>': lambda: Doubletalk.expression,
+		r'<delim>|<bracket>': lambda: Doubletalk.expression,
 		r'<const>|<ident>': {
 			'<op>': lambda: Doubletalk.expression,
-			'</delim>': lambda: Doubletalk.expression[r'<const>|<ident>'],
+			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>'],
 			'<comma>': lambda: Doubletalk.expression
 		}
 	}
 	
+	# TODO: this class should not survive lexer
 	class Lexeme(object):
 		def __init__(self, token, **kwargs):
 			self.token = token
@@ -144,6 +150,7 @@ class Doubletalk(object):
 		def eval(self):
 			return str(self.token.word)
 	
+	# TODO: inherit from int
 	class Number(Constant):
 		def __int__(self):
 			return int(self.token.word)
@@ -162,6 +169,22 @@ class Doubletalk(object):
 		
 		def eval(self):
 			return int(self.token.word)
+	
+	class Group(Lexeme):
+		def __init__(self, group):
+			self.list = group
+			
+		def lextype(self):
+			return '<list>'
+			
+		def __repr__(self):
+			return str(self.list)
+			
+		def __str__(self):
+			return self.list
+
+		def eval(self):
+			return self.list
 		
 	# operators
 	class Operator(Lexeme):
@@ -217,10 +240,11 @@ class Doubletalk(object):
 		def eval(self, left, right, scope):
 			return left * right
 
-	# block delimiters
+	# delimiters
 	class Delimiter(Lexeme):
 		pass
-		
+	
+	# expression delimiters	
 	class Parentheses(Delimiter):
 		
 		def lextype(self):
@@ -228,6 +252,14 @@ class Doubletalk(object):
 
 		def __repr__(self):
 			return '<delim>' if self.open else '</delim>'
+			
+	class Bracket(Delimiter):
+		
+		def lextype(self):
+			return '<bracket>' if self.open else '</bracket>'
+
+		def __repr__(self):
+			return '<bracket>' if self.open else '</bracket>'
 	
 	# list delimiter
 	class Comma(Delimiter):
@@ -299,7 +331,8 @@ class Doubletalk(object):
 			identifier = interp.getval(expr, ref=True)
 			# store identifier & memory address
 			interp.memory.heap[interp.eval(identifier).label] = interp.pntr
-					
+			
+			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
 				
 	

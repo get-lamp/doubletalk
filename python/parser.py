@@ -144,6 +144,27 @@ class Parser(object):
 				
 		return (s,n)
 	
+	def list(self, s):
+		l = []
+		n = []
+		while True and len(s) > 0:
+			i = s.pop(0)
+			if isinstance(i, self.lang.Comma):
+				l.append(n)
+				n = []
+				continue
+			elif isinstance(i, self.lang.Bracket):
+				if i.open:
+					n.append(self.list(s))
+				else:
+					if len(n) > 0:
+						l.append(n)
+					return l
+			else:
+				n.append(i)
+				
+		raise('Closing bracket missing')
+	
 	def push_block(self, block):
 		self.blocks.append(block)
 	
@@ -241,8 +262,6 @@ class Parser(object):
 			else:
 				block.append(i)
 				
-	def list(self):
-		pass
 				
 	def expression(self, until=None):
 		
@@ -269,10 +288,6 @@ class Parser(object):
 					
 			if until is not None and isinstance(lexeme, until):
 				return expression
-			
-			if isinstance(lexeme, self.lang.Comma):
-				print expression
-				exit(0)	
 			
 			# literals
 			if isinstance(lexeme, (self.lang.DoubleQuote, self.lang.SingleQuote)):
@@ -346,7 +361,7 @@ class Parser(object):
 		while s and len(s) > 0:
 			
 			i = s.pop(0)
-			# math grouping
+			# parentheses grouping
 			if isinstance(i, self.lang.Parentheses):
 				if i.open:
 					# n is the i(n)ner node while s is the remaining (i)nstruction
@@ -355,6 +370,14 @@ class Parser(object):
 						n = self.build(n)						
 				else:
 					raise Exception('Unexpected parentheses at %s' % (i.token.line))
+			
+			# bracket grouping
+			elif isinstance(i, self.lang.Bracket):
+				if i.open:
+					return self.lang.Group(self.list(s))					
+				else:
+					raise Exception('Unexpected bracket at %s' % (i.token.line))		
+			
 			# operator delimits terms
 			elif isinstance(i, self.lang.Operator):
 				return [n, i, self.build(s)]

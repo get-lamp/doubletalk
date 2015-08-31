@@ -1,11 +1,16 @@
 // test
+
+//n = 5
+//a = [n + 5,3,4]
+
 /*
-proc test a,(b + 2),c
+proc test a,b,c
 	prnt a
 	prnt b
 	prnt c
 end
 */
+
 
 prnt 'Begin'
 proc a_test_procedure	

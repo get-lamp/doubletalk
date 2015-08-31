@@ -143,6 +143,11 @@ class Interpreter(object):
 			# return value in memory
 			else:
 				return i.eval(self.memory.heap)
+		elif isinstance(i, self.lang.Group):
+			g = i.eval()
+			for k,v in enumerate(g):
+				g[k] = self.getval(self.eval(v))
+			return self.lang.Group(g)
 		# constants
 		elif isinstance(i, self.lang.Constant):
 			return i.eval()
@@ -151,6 +156,9 @@ class Interpreter(object):
 			return i
 	
 	def eval(self, i):
+	
+		if isinstance(i, self.lang.Group):
+			return i
 	
 		if isinstance(i, list):
 			
