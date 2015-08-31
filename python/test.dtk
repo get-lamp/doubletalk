@@ -3,15 +3,19 @@
 //n = 5
 //a = [n + 5,3,4]
 
-/*
+
 proc test a,b,c
-	prnt a
-	prnt b
-	prnt c
+	prnt 'a'
+	prnt 'b'
+	prnt 'c'
 end
-*/
+
+prnt 'OK'
+
+exec test 3,2,1
 
 
+/*
 prnt 'Begin'
 proc a_test_procedure	
 	proc nested_procedure

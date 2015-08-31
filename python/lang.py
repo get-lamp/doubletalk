@@ -170,7 +170,7 @@ class Doubletalk(object):
 		def eval(self):
 			return int(self.token.word)
 	
-	class Group(Lexeme):
+	class Group(Lexeme, list):
 		def __init__(self, group):
 			self.list = group
 			
@@ -181,7 +181,7 @@ class Doubletalk(object):
 			return str(self.list)
 			
 		def __str__(self):
-			return self.list
+			return str(self.list)
 
 		def eval(self):
 			return self.list
@@ -311,26 +311,27 @@ class Doubletalk(object):
 			return '<proc>'
 		
 		def parse(self, parser, **kwargs):
-			#identifier = parser.build(parser.expression())	
-			
-			identifier = [parser.next()]
-			
-			#print identifier
-			
-			#signature = parser.build(parser.expression())
-			
-			#print signature
-			
-			#exit(1)	
-			return [self, identifier]
 		
-		def eval(self, interp, expr):
+			identifier = [parser.next()]			
 			
+			try:
+				signature = parser.build(parser.expression())
+			except Exception as e:
+				print parser.pending
+				signature = []
+							
+			return [self, identifier, signature]
+		
+		def eval(self, interp, signature):
 			print "Procedure is being eval'd"
-		
-			identifier = interp.getval(expr, ref=True)
+			
+			if len(signature) > 1:
+				arguments = signature.pop()
+						
+			identifier = interp.getval(signature.pop(), ref=True)
+			
 			# store identifier & memory address
-			interp.memory.heap[interp.eval(identifier).label] = interp.pntr
+			interp.memory.heap[interp.eval(identifier).label] = (interp.pntr, arguments)
 			
 			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
@@ -342,13 +343,31 @@ class Doubletalk(object):
 			return '<exec>'
 		
 		def parse(self, parser, **kwargs):
-			label = parser.expression()
-			return [self, label]
-		
-		def eval(self, interp, expr):
 			
-			proc = expr.pop(0)
-			interp.call(proc[0].label)
+			identifier = [parser.next()]			
+			
+			try:
+				signature = parser.build(parser.expression())
+			except Exception as e:
+				print parser.pending
+				signature = []
+	
+			#label = parser.expression()
+			
+			return [self, identifier, signature]
+		
+		def eval(self, interp, signature):
+			print "Procedure is being call'd"
+			
+			# get arguments if any
+			if len(signature) > 1:
+				arguments = signature.pop()
+				
+			# get identifier
+			identifier = interp.getval(signature.pop(), ref=True)
+			
+			# call	
+			interp.call(identifier.label, arguments)
 						
 			
 	class Prnt(Keyword):

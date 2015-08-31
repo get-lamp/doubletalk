@@ -162,8 +162,9 @@ class Parser(object):
 					return l
 			else:
 				n.append(i)
-				
-		raise('Closing bracket missing')
+		
+		l.append(n)		
+		return l
 	
 	def push_block(self, block):
 		self.blocks.append(block)
@@ -371,10 +372,14 @@ class Parser(object):
 				else:
 					raise Exception('Unexpected parentheses at %s' % (i.token.line))
 			
-			# bracket grouping
+			# list without brackets. Like arguments list
+			elif isinstance(i, self.lang.Comma):
+				return self.lang.Group(self.list(n + [i] + s))
+			# list with brackets	
 			elif isinstance(i, self.lang.Bracket):
 				if i.open:
 					return self.lang.Group(self.list(s))					
+				# closing brackets are dispossed by self.list, so they shouldn't come up here
 				else:
 					raise Exception('Unexpected bracket at %s' % (i.token.line))		
 			

@@ -64,13 +64,28 @@ class Interpreter(object):
 	def move(self, i):
 		self.pntr += i
 	
-	def call(self, identifier, **kwargs):
+	def call(self, identifier, cargs=[]):
 		print 'Calling procedure %s' % (identifier)
-		# push func call to stack
-		self.stack_push({'ret_addr': self.pntr, 'kwargs': kwargs})
-		# enable reading func block
+		
+		cargs = cargs.eval()
+		
+		# push block
 		self.push_block('<proc>')
-		self.goto(self.memory.heap[identifier])
+		
+		# address & get signarure
+		address,fargs = self.memory.heap[identifier]
+		fargs = fargs.eval()
+		
+		if len(fargs) != len(cargs):
+			raise Exception('Function expects %s arguments. Given %s' % (len(fargs), len(cargs)))
+				
+			
+		scope = {self.eval(k).label:self.getval(self.eval(cargs[v])) for v,k in enumerate(fargs)}
+			
+		# push to stack
+		self.stack_push({'ret_addr': self.pntr, 'scope': scope})
+		
+		self.goto(address)
 	
 	def endblock(self):
 		self.pull_block()
@@ -158,7 +173,7 @@ class Interpreter(object):
 	def eval(self, i):
 	
 		if isinstance(i, self.lang.Group):
-			return i
+			return self.getval(i)
 	
 		if isinstance(i, list):
 			
