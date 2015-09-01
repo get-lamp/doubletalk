@@ -4,11 +4,11 @@ from lang import *
 class Lexer(object):
 
 	class Token(object):
-		def __init__(self, line, char, word):
+		def __init__(self, word, line, char):
+			self.word = word
 			self.line = line
 			self.char = char
-			self.word = word
-
+			
 		def __repr__(self):
 			return "Token(line=(%s)%s, char=(%s)%s, word=(%s)'%s'" % (type(self.line), self.line, type(self.char), self.char, type(self.word), self.word)
 
@@ -68,8 +68,13 @@ class Lexer(object):
 			self.nline = self.nline + 1
 		else:
 			self.nchar 	= self.nchar + 1
+		
+		word = ''.join(self.token) if len(self.token) > 0 else None
 
-		return self.Token(self.nline, self.nchar, ''.join(self.token)) if len(self.token) > 0 else None
+		if word is None:
+			return None
+
+		return self.Token(word, line=self.nline, char=self.nchar)
 		
 
 	def next(self):
@@ -92,13 +97,20 @@ class Lexer(object):
 				if regexp is None:
 					self.backtrack(1)
 					continue
-
-				if re.match(regexp, token.word):
-					word.append(token.word)
-					# move forward in tree
-					tree = tree[regexp]
-					match = token.word
-					break
+				
+				try:
+				
+					if re.match(regexp, token.word):
+						word.append(token.word)
+						# move forward in tree
+						tree = tree[regexp]
+						match = token.word
+						break
+				
+				except TypeError as err:
+					print token
+					print err
+					exit(1)
 	
 			if match is not None:
 				# there is a possible continuation to this symbol
@@ -114,7 +126,7 @@ class Lexer(object):
 
 			token.word = ''.join(word)
 
-			return tree(token)
+			return tree(token.word, (token.line, token.char))
 
 	
 class Parser(object):
@@ -146,24 +158,24 @@ class Parser(object):
 	
 	def list(self, s):
 		l = []
-		n = []
+		e = []
 		while True and len(s) > 0:
 			i = s.pop(0)
 			if isinstance(i, self.lang.Comma):
-				l.append(n)
-				n = []
+				l.append(e)
+				e = []
 				continue
 			elif isinstance(i, self.lang.Bracket):
 				if i.open:
-					n.append(self.list(s))
+					e = self.list(s)
 				else:
-					if len(n) > 0:
-						l.append(n)
+					if len(e) > 0:
+						l.append(e)
 					return l
 			else:
-				n.append(i)
+				e.append(i)
 		
-		l.append(n)		
+		l.append(e)		
 		return l
 	
 	def push_block(self, block):
@@ -200,7 +212,7 @@ class Parser(object):
 				if found:
 					return verbatim
 			else:
-				verbatim.append(lexeme.token.word)
+				verbatim.append(lexeme.word)
 
 		return False
 		
@@ -297,8 +309,7 @@ class Parser(object):
 				else:
 					string = ''.join(self.verbatim(self.lang.SingleQuote))
 				
-				t = self.lexer.Token(None, None, string)
-				l = self.lang.String(t)
+				l = self.lang.String(string, (lexeme.line, lexeme.char))
 				expression.push(l)		
 				continue
 			
@@ -374,11 +385,11 @@ class Parser(object):
 			
 			# list without brackets. Like arguments list
 			elif isinstance(i, self.lang.Comma):
-				return self.lang.Group(self.list(n + [i] + s))
+				return self.lang.List(self.list(n + [i] + s))
 			# list with brackets	
 			elif isinstance(i, self.lang.Bracket):
 				if i.open:
-					return self.lang.Group(self.list(s))					
+					return self.lang.List(self.list(s))					
 				# closing brackets are dispossed by self.list, so they shouldn't come up here
 				else:
 					raise Exception('Unexpected bracket at %s' % (i.token.line))		

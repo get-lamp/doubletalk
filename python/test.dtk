@@ -1,9 +1,16 @@
 // test
 
+a = [3+3*2,'3',[5*1],'6']
+
+b = 'a','5',['4','3']
+
+prnt a
+
+
 //n = 5
 //a = [n + 5,3,4]
 
-
+/*
 proc test a,b,c
 	prnt 'a'
 	prnt 'b'
@@ -13,7 +20,7 @@ end
 prnt 'OK'
 
 exec test 3,2,1
-
+*/
 
 /*
 prnt 'Begin'

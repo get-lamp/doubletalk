@@ -80,7 +80,7 @@ class Interpreter(object):
 			raise Exception('Function expects %s arguments. Given %s' % (len(fargs), len(cargs)))
 				
 			
-		scope = {self.eval(k).label:self.getval(self.eval(cargs[v])) for v,k in enumerate(fargs)}
+		scope = {self.eval(k).word:self.getval(self.eval(cargs[v])) for v,k in enumerate(fargs)}
 			
 		# push to stack
 		self.stack_push({'ret_addr': self.pntr, 'scope': scope})
@@ -158,11 +158,11 @@ class Interpreter(object):
 			# return value in memory
 			else:
 				return i.eval(self.memory.heap)
-		elif isinstance(i, self.lang.Group):
+		elif isinstance(i, self.lang.List):
 			g = i.eval()
 			for k,v in enumerate(g):
 				g[k] = self.getval(self.eval(v))
-			return self.lang.Group(g)
+			return self.lang.List(g)
 		# constants
 		elif isinstance(i, self.lang.Constant):
 			return i.eval()
@@ -172,7 +172,7 @@ class Interpreter(object):
 	
 	def eval(self, i):
 	
-		if isinstance(i, self.lang.Group):
+		if isinstance(i, self.lang.List):
 			return self.getval(i)
 	
 		if isinstance(i, list):

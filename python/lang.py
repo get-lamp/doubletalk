@@ -31,64 +31,64 @@ class Doubletalk(object):
 	r_atsign		= r'[@]'
 	
 	symbols = {
-		r_space: 			lambda t: Doubletalk.Space(t),
-		r_newline:			lambda t: Doubletalk.NewLine(t),
-		r_tab:				lambda t: Doubletalk.Tab(t),
-		r_bracket_l: 		lambda t: Doubletalk.Bracket(t, open=True),
-		r_bracket_r:		lambda t: Doubletalk.Bracket(t, open=False),
-		r_double_quote: 	lambda t: Doubletalk.DoubleQuote(t),
-		r_single_quote: 	lambda t: Doubletalk.SingleQuote(t),
-		r_parentheses_l: 	lambda t: Doubletalk.Parentheses(t, open=True),
-		r_parentheses_r:	lambda t: Doubletalk.Parentheses(t, open=False),
+		r_space: 			lambda w,t: Doubletalk.Space(w,t),
+		r_newline:			lambda w,t: Doubletalk.NewLine(w,t),
+		r_tab:				lambda w,t: Doubletalk.Tab(w,t),
+		r_bracket_l: 		lambda w,t: Doubletalk.Bracket(w,t,open=True),
+		r_bracket_r:		lambda w,t: Doubletalk.Bracket(w,t,open=False),
+		r_double_quote: 	lambda w,t: Doubletalk.DoubleQuote(w,t),
+		r_single_quote: 	lambda w,t: Doubletalk.SingleQuote(w,t),
+		r_parentheses_l: 	lambda w,t: Doubletalk.Parentheses(w,t, open=True),
+		r_parentheses_r:	lambda w,t: Doubletalk.Parentheses(w,t, open=False),
 		r_slash: {
-			r_asterisk:		lambda t: Doubletalk.CommentBlock(t, open=True),
-			r_slash: 		lambda t: Doubletalk.CommentLine(t),
-			None:			lambda t: Doubletalk.Divide(t)
+			r_asterisk:		lambda w,t: Doubletalk.CommentBlock(w,t, open=True),
+			r_slash: 		lambda w,t: Doubletalk.CommentLine(w,t),
+			None:			lambda w,t: Doubletalk.Divide(w,t)
 		},
 		r_asterisk: {
-			r_slash:		lambda t: Doubletalk.CommentBlock(t, open=False),
-			None:			lambda t: Doubletalk.Multiply(t)
+			r_slash:		lambda w,t: Doubletalk.CommentBlock(w,t, open=False),
+			None:			lambda w,t: Doubletalk.Multiply(w,t)
 		},
-		r_comma: 			lambda t: Doubletalk.Comma(t),
+		r_comma: 			lambda w,t: Doubletalk.Comma(w,t),
 		r_bang: {
 			r_equal: {
-				r_equal:	lambda t: Doubletalk.InequalStrict(t),
-				None:		lambda t: Doubletalk.Inequal(t)
+				r_equal:	lambda w,t: Doubletalk.InequalStrict(w,t),
+				None:		lambda w,t: Doubletalk.Inequal(w,t)
 			},
-			None: 			lambda t: Doubletalk.Assign(t)
+			None: 			lambda w,t: Doubletalk.Assign(w,t)
 		},
 		r_equal: {
 			r_equal: {
-				r_equal:	lambda t: Doubletalk.EqualStrict(t),
-				None:		lambda t: Doubletalk.Equal(t)
+				r_equal:	lambda w,t: Doubletalk.EqualStrict(w,t),
+				None:		lambda w,t: Doubletalk.Equal(w,t)
 			},
-			None: 			lambda t: Doubletalk.Assign(t)
+			None: 			lambda w,t: Doubletalk.Assign(w,t)
 		},
 		r_plus: {
-			r_plus:			lambda t: Doubletalk.Increment(t),
-			None:			lambda t: Doubletalk.Add(t)
+			r_plus:			lambda w,t: Doubletalk.Increment(w,t),
+			None:			lambda w,t: Doubletalk.Add(w,t)
 		},
 		r_dash: {
-			r_dash:			lambda t: Doubletalk.Decrement(t),
-			None:			lambda t: Doubletalk.Subtract(t)
+			r_dash:			lambda w,t: Doubletalk.Decrement(w,t),
+			None:			lambda w,t: Doubletalk.Subtract(w,t)
 		},
-		r_number: 			lambda t: Doubletalk.Number(t),
-		r_identifier:		lambda t: Doubletalk.keywords[t.word](t) if t.word in Doubletalk.keywords else Doubletalk.Identifier(t),
+		r_number: 			lambda w,t: Doubletalk.Number(w,t),
+		r_identifier:		lambda w,t: Doubletalk.keywords[w](w,t) if w in Doubletalk.keywords else Doubletalk.Identifier(w,t),
 		r_atsign: {
-			r_identifier:	lambda t: Doubletalk.Character(t),
-			None: 			lambda t: Doubletalk.Ego(t)
+			r_identifier:	lambda t: Doubletalk.Character(w,t),
+			None: 			lambda t: Doubletalk.Ego(w,t)
 		}
 	}
 
 	keywords = {
-		'prnt':		lambda t: Doubletalk.Prnt(t),
-		'if':		lambda t: Doubletalk.If(t),
-		'then':		lambda t: Doubletalk.Then(t),
-		'else':		lambda t: Doubletalk.Else(t),
-		'end':		lambda t: Doubletalk.End(t),
-		'proc':		lambda t: Doubletalk.Proc(t),
-		'exec':		lambda t: Doubletalk.Exec(t),
-		'include':	lambda t: Doubletalk.Include(t)
+		'prnt':		lambda w,t: Doubletalk.Prnt(w,t),
+		'if':		lambda w,t: Doubletalk.If(w,t),
+		'then':		lambda w,t: Doubletalk.Then(w,t),
+		'else':		lambda w,t: Doubletalk.Else(w,t),
+		'end':		lambda w,t: Doubletalk.End(w,t),
+		'proc':		lambda w,t: Doubletalk.Proc(w,t),
+		'exec':		lambda w,t: Doubletalk.Exec(w,t),
+		'include':	lambda w,t: Doubletalk.Include(w,t)
 	}
 
 	expression = {
@@ -102,8 +102,9 @@ class Doubletalk(object):
 	
 	# TODO: this class should not survive lexer
 	class Lexeme(object):
-		def __init__(self, token, **kwargs):
-			self.token = token
+		def __init__(self, word, pos=(None,None), **kwargs):
+			self.word = word
+			self.line, self.char = pos
 			self.set(kwargs)
 			self.length = 0
 			self.owner = None
@@ -113,12 +114,12 @@ class Doubletalk(object):
 				setattr(self, i, kwargs[i])
 			
 		def __eq__(self, other):
-			return self.token.word == other
+			return self.word == other
 		
 		def __ne__(self, other):
-			return self.token.word != other
+			return self.word != other
 		
-		def lextype(self):
+		def type(self):
 			return '<none>'
 
 		def parse(self, parser, **kwargs):
@@ -132,7 +133,7 @@ class Doubletalk(object):
 		pass
 
 	class NewLine(WhiteSpace):
-		def lextype(self):
+		def type(self):
 			return '<newline>'
 
 	class Tab(WhiteSpace):
@@ -140,66 +141,62 @@ class Doubletalk(object):
 
 	# constants
 	class Constant(Lexeme):
-		def lextype(self):
+		def type(self):
 			return '<const>'
 			
 		def __repr__(self):
-			return '<const %s>' % (self.token.word)
+			return '<const %s>' % (self.word)
 
-	class String(Constant):
+	class String(str, Constant):
+		def __init__(self, string, pos=(None,None)):
+			super(Doubletalk.String, self).__init__(string, pos)
+		
+		def __new__(cls, *args, **kw):
+			string,pos = args
+			return  super(Doubletalk.String, cls).__new__(cls, string)
+			
 		def eval(self):
-			return str(self.token.word)
+			return str(self)
 	
 	# TODO: inherit from int
-	class Number(Constant):
-		def __int__(self):
-			return int(self.token.word)
-			
-		def __add__(self, other):
-			return int(self) + int(other)
+	class Number(int, Constant):
 		
-		def __sub__(self, other):
-			return int(self) - int(other)
+		def __init__(self, number, pos=(None,None)):
+			super(Doubletalk.Number, self).__init__(number, pos)
 		
-		def __mul__(self, other):
-			return int(self) * int(other)
-		
-		def __div__(self, other):
-			return int(self) / int(other)
-		
-		def eval(self):
-			return int(self.token.word)
-	
-	class Group(Lexeme, list):
-		def __init__(self, group):
-			self.list = group
-			
-		def lextype(self):
-			return '<list>'
-			
-		def __repr__(self):
-			return str(self.list)
-			
-		def __str__(self):
-			return str(self.list)
+		def __new__(cls, *args, **kw):
+			number,pos = args
+			return  super(Doubletalk.Number, cls).__new__(cls, number)
 
 		def eval(self):
-			return self.list
+			return self
+	
+	class List(list, Lexeme):
+	
+		def __init__(self, l):
+			print l
+			list.__init__(self, l)
+			
+		def type(self):
+			return '<list>'
+			
+		def eval(self):
+			return self
 		
 	# operators
 	class Operator(Lexeme):
-		def lextype(self):
+		def type(self):
 			return '<op>'
 
 		def __repr__(self):
-			return '<op %s>' % (self.token.word)
+			return '<op %s>' % (self.word)
 		
 		def eval(self, left, right):
 			pass
 
 	class Assign(Operator):
 		def eval(self, left, right, heap):
-			heap[left.label] = right
+			heap[left.word] = right
 			return right
 
 	class Equal(Operator):
@@ -247,7 +244,7 @@ class Doubletalk(object):
 	# expression delimiters	
 	class Parentheses(Delimiter):
 		
-		def lextype(self):
+		def type(self):
 			return '<delim>' if self.open else '</delim>'
 
 		def __repr__(self):
@@ -255,7 +252,7 @@ class Doubletalk(object):
 			
 	class Bracket(Delimiter):
 		
-		def lextype(self):
+		def type(self):
 			return '<bracket>' if self.open else '</bracket>'
 
 		def __repr__(self):
@@ -264,7 +261,7 @@ class Doubletalk(object):
 	# list delimiter
 	class Comma(Delimiter):
 		
-		def lextype(self):
+		def type(self):
 			return '<comma>'
 
 		def __repr__(self):
@@ -273,7 +270,7 @@ class Doubletalk(object):
 	# string delimiters
 	class DoubleQuote(Delimiter):
 		
-		def lextype(self):
+		def type(self):
 			return '<d-quote>'
 
 		def __repr__(self):
@@ -281,7 +278,7 @@ class Doubletalk(object):
 	
 	class SingleQuote(Delimiter):
 		
-		def lextype(self):
+		def type(self):
 			return '<s-quote>'
 
 		def __repr__(self):
@@ -299,15 +296,15 @@ class Doubletalk(object):
 		
 	class Keyword(Lexeme):
 		
-		def lextype(self):
+		def type(self):
 			return '<keyword>'
 			
 		def __repr__(self):
-			return '<keyword %s>' % (self.token.word)
+			return '<keyword %s>' % (self.word)
 	
 	class Proc(Keyword,Block,Control):
 		
-		def lextype(self):
+		def type(self):
 			return '<proc>'
 		
 		def parse(self, parser, **kwargs):
@@ -331,7 +328,7 @@ class Doubletalk(object):
 			identifier = interp.getval(signature.pop(), ref=True)
 			
 			# store identifier & memory address
-			interp.memory.heap[interp.eval(identifier).label] = (interp.pntr, arguments)
+			interp.memory.heap[interp.eval(identifier).word] = (interp.pntr, arguments)
 			
 			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
@@ -339,7 +336,7 @@ class Doubletalk(object):
 	
 	class Exec(Keyword):
 		
-		def lextype(self):
+		def type(self):
 			return '<exec>'
 		
 		def parse(self, parser, **kwargs):
@@ -367,12 +364,12 @@ class Doubletalk(object):
 			identifier = interp.getval(signature.pop(), ref=True)
 			
 			# call	
-			interp.call(identifier.label, arguments)
+			interp.call(identifier.word, arguments)
 						
 			
 	class Prnt(Keyword):
 		
-		def lextype(self):
+		def type(self):
 			return '<prnt>'
 		
 		def parse(self, parser, **kwargs):
@@ -388,10 +385,7 @@ class Doubletalk(object):
 
 	class If(Keyword,Block,Control):
 	
-		def __init__(self, token, **kwargs):
-			super(Doubletalk.If, self).__init__(token)
-
-		def lextype(self):
+		def type(self):
 			return '<if>'
 
 		def parse(self, parser, **kwargs):
@@ -409,7 +403,7 @@ class Doubletalk(object):
 	
 	class Then(Keyword,Control):
 		
-		def lextype(self):
+		def type(self):
 			return '<then>'
 			
 		def parse(self, parser, **kwargs):
@@ -424,7 +418,7 @@ class Doubletalk(object):
 
 	class Else(Keyword,Control):
 		
-		def lextype(self):
+		def type(self):
 			return '<else>'
 		
 		def parse(self, parser, **kwargs):
@@ -439,7 +433,7 @@ class Doubletalk(object):
 	
 	class End(Keyword,Control,Delimiter):
 		
-		def lextype(self):
+		def type(self):
 			return '<end>'
 			
 		def parse(self, parser, **kwargs):
@@ -474,24 +468,20 @@ class Doubletalk(object):
 	class Include(Preprocessor, Keyword):
 		def parse(self, parser):
 			pass
-		def lextype(self):
+		def type(self):
 			return '<preprocessor><keyword>include'
 		
 	# identifiers
 	class Identifier(Lexeme):
 		
-		def __init__(self, token, **kwargs):
-			self.label = token.word
-			super(Doubletalk.Identifier, self).__init__(token)
-		
-		def lextype(self):
+		def type(self):
 			return '<ident>'
 		
 		def __repr__(self):
-			return '<ident %s>' % (self.token.word)
+			return '<ident %s>' % (self.word)
 		
 		def eval(self, heap):
-			return heap.get(self.label, None)
+			return heap.get(self.word, None)
 
 	# entity
 	class GameObject(Lexeme):
@@ -515,7 +505,7 @@ class Doubletalk(object):
 			branch = grammar
 			# iterate through currently legal words	
 			for r in branch:	
-				if re.match(r, i.lextype()):
+				if re.match(r, i.type()):
 					return True
 				elif branch.get(r, None) is not None:
 					branch = branch[r] if not callable(branch[r]) else branch[r]()
@@ -530,7 +520,7 @@ class Doubletalk(object):
 				# iterate through currently legal words	
 				found = False
 				for r in rules:
-					if re.match(r, i.lextype()):
+					if re.match(r, i.type()):
 						rules = rules[r] if not callable(rules[r]) else rules[r]()
 						found = True
 						break
@@ -550,7 +540,7 @@ class Doubletalk(object):
 		def can_push(self, i):
 			# iterate through currently legal words	
 			for r in self.legal:	
-				if re.match(r, i.lextype()):
+				if re.match(r, i.type()):
 					return r
 			return False
 
@@ -560,7 +550,7 @@ class Doubletalk(object):
 				self.legal = self.grammar
 				
 			l = self.can_push(i)
-			#print 'Is legal %s? %s %s %s' % (self.__class__.__name__, i.lextype(), self.hint(), l)
+			#print 'Is legal %s? %s %s %s' % (self.__class__.__name__, i.type(), self.hint(), l)
 			# push term
 			if l:
 				# climb up in grammar tree
@@ -575,12 +565,12 @@ class Doubletalk(object):
 		def __init__(self):
 			super(Doubletalk.Statement, self).__init__(Doubletalk.statement)
 		
-		def lextype(self):
+		def type(self):
 			return '<statement>'
 		
 	class Expression(Grammar):
 		def __init__(self):
 			super(Doubletalk.Expression, self).__init__(Doubletalk.expression)
 		
-		def lextype(self):
+		def type(self):
 			return '<expression>'
