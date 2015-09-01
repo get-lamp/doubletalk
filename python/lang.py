@@ -6,7 +6,7 @@ import StringIO, re
 
 class Doubletalk(object):
 
-	delimiters = "[\"\'.:!,;+*^&@#$%&\-\\/\|=$()?<>\s\[\]]"
+	delimiters = "[\"\':!,;+*^&@#$%&\-\\/\|=$()?<>\s\[\]]"
 	
 	r_space 		= r'[ ]'
 	r_newline		= r'[\n]'
@@ -26,7 +26,8 @@ class Doubletalk(object):
 	r_question		= r'[?]'
 	r_double_quote 	= r'[\"]'
 	r_single_quote 	= r"[\']"
-	r_number 		= r'^[0-9]+'
+	r_float			= r'^-?[0-9]*\.[0-9]+$'
+	r_int	 		= r'^[0-9]+$'
 	r_identifier 	= r'[_a-zA-Z][_a-zA-Z0-9]*'
 	r_atsign		= r'[@]'
 	
@@ -72,7 +73,8 @@ class Doubletalk(object):
 			r_dash:			lambda w,t: Doubletalk.Decrement(w,t),
 			None:			lambda w,t: Doubletalk.Subtract(w,t)
 		},
-		r_number: 			lambda w,t: Doubletalk.Number(w,t),
+		r_float: 			lambda w,t: Doubletalk.Float(w,t),
+		r_int: 				lambda w,t: Doubletalk.Integer(w,t),
 		r_identifier:		lambda w,t: Doubletalk.keywords[w](w,t) if w in Doubletalk.keywords else Doubletalk.Identifier(w,t),
 		r_atsign: {
 			r_identifier:	lambda t: Doubletalk.Character(w,t),
@@ -158,15 +160,27 @@ class Doubletalk(object):
 		def eval(self):
 			return str(self)
 	
-	# TODO: inherit from int
-	class Number(int, Constant):
+
+	class Float(float, Constant):
 		
 		def __init__(self, number, pos=(None,None)):
-			super(Doubletalk.Number, self).__init__(number, pos)
+			super(Doubletalk.Float, self).__init__(number, pos)
 		
 		def __new__(cls, *args, **kw):
 			number,pos = args
-			return  super(Doubletalk.Number, cls).__new__(cls, number)
+			return  super(Doubletalk.Float, cls).__new__(cls, number)
+
+		def eval(self):
+			return self
+	
+	class Integer(int, Constant):
+		
+		def __init__(self, number, pos=(None,None)):
+			super(Doubletalk.Integer, self).__init__(number, pos)
+		
+		def __new__(cls, *args, **kw):
+			number,pos = args
+			return  super(Doubletalk.Integer, cls).__new__(cls, number)
 
 		def eval(self):
 			return self
@@ -466,10 +480,17 @@ class Doubletalk(object):
 		pass
 
 	class Include(Preprocessor, Keyword):
-		def parse(self, parser):
-			pass
+		
 		def type(self):
-			return '<preprocessor><keyword>include'
+			return '<include>'
+			
+		def parse(self, parser):
+			src = parser.expression()
+			return [self, src]
+
+		def eval(self, interp, source):
+			print source
+			exit(1)
 		
 	# identifiers
 	class Identifier(Lexeme):

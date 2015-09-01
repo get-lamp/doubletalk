@@ -3,6 +3,7 @@ OP Rendezvous
 TO [@Karl, @Guillam]
 CLEARANCE None
 
+
 DEFINE setup
 	Mitte >> Hengelsplatz Cafe AS redezvous
 	Mitte >> Post Office > AS dead-drop

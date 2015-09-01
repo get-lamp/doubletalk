@@ -1,10 +1,17 @@
 // test
 
-a = [3+3*2,'3',[5*1],'6']
+//include 'sample.dtk'
 
-b = 'a','5',['4','3']
+j = 5.3
+p = .5
 
-prnt a
+prnt j-p
+
+a = 1
+
+b = 2
+
+prnt a + b
 
 
 //n = 5

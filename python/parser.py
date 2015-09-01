@@ -125,7 +125,8 @@ class Lexer(object):
 				continue
 
 			token.word = ''.join(word)
-
+			
+			# return a typed lexeme
 			return tree(token.word, (token.line, token.char))
 
 	

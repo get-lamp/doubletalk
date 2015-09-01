@@ -1,6 +1,10 @@
 
-TO [@a]
-CLEARANCE [@a, @b, @c, UK, US]
+prnt 'Im sample.dtk'
 
-T-ZERO = 0
+y = 10
+z = 5
+
+prnt y*z
+
+
 
