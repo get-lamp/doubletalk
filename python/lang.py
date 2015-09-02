@@ -196,7 +196,7 @@ class Doubletalk(object):
 	
 	class List(list, Struct):
 	
-		def __init__(self, l):
+		def __init__(self, l=[]):
 			list.__init__(self, l)
 			
 		def type(self):

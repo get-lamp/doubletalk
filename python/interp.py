@@ -157,14 +157,9 @@ class Interpreter(object):
 			else:
 				return i.eval(self.memory.heap)
 		
+		# structs
 		elif isinstance(i, self.lang.Struct):
 			return i
-		
-		#elif isinstance(i, self.lang.List):
-		#	g = i.eval()
-		#	for k,v in enumerate(g):
-		#		g[k] = self.getval(self.eval(v))
-		#	return self.lang.List(g)
 		
 		# constants
 		elif isinstance(i, self.lang.Constant):

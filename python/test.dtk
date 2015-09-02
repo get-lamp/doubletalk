@@ -1,18 +1,22 @@
-a = ['a','b','c'] + ['d']
 
-prnt a
+z = 1,2,3
 
+prnt 'ack!'
 
+/*
 proc test x,y,z
 	prnt 'a'
 	prnt 'b'
 	prnt 'c'
 end
 
+a = 3
+b = 4
+
 prnt 'OK'
 
-exec test 3,2,1
-
+exec test [a],[b],[1]
+*/
 
 
 /*

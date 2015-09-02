@@ -157,28 +157,7 @@ class Parser(object):
 				
 		return (s,n)
 	
-	def list(self, s):
-		l = []
-		e = []
-		while True and len(s) > 0:
-			i = s.pop(0)
-			if isinstance(i, self.lang.Comma):
-				l.append(e)
-				e = []
-				continue
-			elif isinstance(i, self.lang.Bracket):
-				if i.open:
-					e = self.list(s)
-				else:
-					if len(e) > 0:
-						l.append(e)
-					return l
-			else:
-				e.append(i)
-		
-		l.append(e)		
-		return l
-	
+
 	def push_block(self, block):
 		self.blocks.append(block)
 	
@@ -248,6 +227,29 @@ class Parser(object):
 			break
 			
 		return lexeme
+	
+	def list(self, s):
+		l = []
+		e = []
+		while True and len(s) > 0:
+			i = s.pop(0)
+			if isinstance(i, self.lang.Comma):
+				l.append(e)
+				e = []
+				continue
+			elif isinstance(i, self.lang.Bracket):
+				if i.open:
+					e = self.list(s)
+				else:
+					if len(e) > 0:
+						l.append(e)
+					return l
+			else:
+				e.append(i)
+		
+		l.append(e)	
+		print l	
+		return l
 		
 	
 	def block(self, until=None):
@@ -284,7 +286,7 @@ class Parser(object):
 		while True:
 		
 			lexeme = self.next()
-			
+				
 			# EOF
 			if lexeme is False:
 				# return last expression
@@ -318,6 +320,8 @@ class Parser(object):
 				expression.push(lexeme)
 			else:
 				self.pending.append(lexeme)
+				print 'Expression rejected %s' % (lexeme)
+				print 'Expecting %s' % (expression.hint())
 				raise Exception('Unexpected %s' % (lexeme))				
 							
 		return expression
@@ -360,7 +364,7 @@ class Parser(object):
 	
 	def build(self, s=None):
 		
-		# s as sentence. Ff s is None, parse self, that is: the root
+		# s as sentence. If s is None, parse self as the tree root
 		s = s if s is not None else self
 		# n as the node we are building
 		n = []
@@ -384,7 +388,8 @@ class Parser(object):
 			
 			# list without brackets. Like arguments list
 			elif isinstance(i, self.lang.Comma):
-				n.append(self.lang.List(self.list(n + [i] + s)))
+				return self.lang.List(self.list(n + [i] + s))			
+			
 			# list with brackets	
 			elif isinstance(i, self.lang.Bracket):
 				if i.open:
