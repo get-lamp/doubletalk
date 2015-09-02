@@ -1,8 +1,8 @@
 import StringIO, re
 
 # 	TODO 
-#	better string handling
 #	weird delimiter characters behavior 
+#	get rid of tags. Use isinstace() instead
 
 class Doubletalk(object):
 
@@ -26,7 +26,7 @@ class Doubletalk(object):
 	r_question		= r'[?]'
 	r_double_quote 	= r'[\"]'
 	r_single_quote 	= r"[\']"
-	r_float			= r'^-?[0-9]*\.[0-9]+$'
+	r_float			= r'^[0-9]*\.[0-9]+$'
 	r_int	 		= r'^[0-9]+$'
 	r_identifier 	= r'[_a-zA-Z][_a-zA-Z0-9]*'
 	r_atsign		= r'[@]'
@@ -69,12 +69,15 @@ class Doubletalk(object):
 			r_plus:			lambda w,t: Doubletalk.Increment(w,t),
 			None:			lambda w,t: Doubletalk.Add(w,t)
 		},
-		r_dash: {
-			r_dash:			lambda w,t: Doubletalk.Decrement(w,t),
-			None:			lambda w,t: Doubletalk.Subtract(w,t)
-		},
 		r_float: 			lambda w,t: Doubletalk.Float(w,t),
 		r_int: 				lambda w,t: Doubletalk.Integer(w,t),
+		r_dash: {
+			r_dash:			lambda w,t: Doubletalk.Decrement(w,t),
+			r_float: 		lambda w,t: Doubletalk.Float(w,t),
+			r_int: 			lambda w,t: Doubletalk.Integer(w,t),
+			None:			lambda w,t: Doubletalk.Subtract(w,t)
+		},
+		
 		r_identifier:		lambda w,t: Doubletalk.keywords[w](w,t) if w in Doubletalk.keywords else Doubletalk.Identifier(w,t),
 		r_atsign: {
 			r_identifier:	lambda t: Doubletalk.Character(w,t),
@@ -114,12 +117,14 @@ class Doubletalk(object):
 		def set(self, kwargs):
 			for i in kwargs:
 				setattr(self, i, kwargs[i])
-			
+		
+		"""	
 		def __eq__(self, other):
 			return self.word == other
 		
 		def __ne__(self, other):
 			return self.word != other
+		"""
 		
 		def type(self):
 			return '<none>'
@@ -141,7 +146,11 @@ class Doubletalk(object):
 	class Tab(WhiteSpace):
 		pass
 
-	# constants
+	# base types
+	class Struct(Lexeme):
+		def type(self):
+			return '<struct>'
+			
 	class Constant(Lexeme):
 		def type(self):
 			return '<const>'
@@ -185,15 +194,24 @@ class Doubletalk(object):
 		def eval(self):
 			return self
 	
-	class List(list, Lexeme):
+	class List(list, Struct):
 	
 		def __init__(self, l):
-			print l
 			list.__init__(self, l)
 			
 		def type(self):
 			return '<list>'
 			
+		def __add__(self, other):
+			return Doubletalk.List(list.__add__(self, other))
+		
+		def __getitem__(self, item):
+			result = list.__getitem__(self, item)
+			try:
+				return Doubletalk.List(result)
+			except TypeError:
+				return result
+        	
 		def eval(self):
 			return self
 		
@@ -328,7 +346,6 @@ class Doubletalk(object):
 			try:
 				signature = parser.build(parser.expression())
 			except Exception as e:
-				print parser.pending
 				signature = []
 							
 			return [self, identifier, signature]
@@ -373,7 +390,7 @@ class Doubletalk(object):
 			# get arguments if any
 			if len(signature) > 1:
 				arguments = signature.pop()
-				
+							
 			# get identifier
 			identifier = interp.getval(signature.pop(), ref=True)
 			

@@ -318,9 +318,7 @@ class Parser(object):
 				expression.push(lexeme)
 			else:
 				self.pending.append(lexeme)
-				print 'Parsed %s' % (expression)
-				print 'Expecting %s' % (expression.hint())
-				raise Exception('Syntax error. Unexpected %s' % (lexeme))
+				raise Exception('Unexpected %s' % (lexeme))				
 							
 		return expression
 	
@@ -386,11 +384,11 @@ class Parser(object):
 			
 			# list without brackets. Like arguments list
 			elif isinstance(i, self.lang.Comma):
-				return self.lang.List(self.list(n + [i] + s))
+				n.append(self.lang.List(self.list(n + [i] + s)))
 			# list with brackets	
 			elif isinstance(i, self.lang.Bracket):
 				if i.open:
-					return self.lang.List(self.list(s))					
+					n.append(self.lang.List(self.list(s)))					
 				# closing brackets are dispossed by self.list, so they shouldn't come up here
 				else:
 					raise Exception('Unexpected bracket at %s' % (i.token.line))		

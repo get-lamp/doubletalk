@@ -67,14 +67,12 @@ class Interpreter(object):
 	def call(self, identifier, cargs=[]):
 		print 'Calling procedure %s' % (identifier)
 		
-		cargs = cargs.eval()
-		
+	
 		# push block
 		self.push_block('<proc>')
 		
 		# address & get signarure
 		address,fargs = self.memory.heap[identifier]
-		fargs = fargs.eval()
 		
 		if len(fargs) != len(cargs):
 			raise Exception('Function expects %s arguments. Given %s' % (len(fargs), len(cargs)))
@@ -145,9 +143,9 @@ class Interpreter(object):
 		return self.ctrl_stack.pop()
 	
 	def getval(self, i, **kwargs):
-
+		
 		# it's nested
-		if isinstance(i, list):	
+		if isinstance(i, list) and not isinstance(i, self.lang.List):	
 			return self.getval(i.pop(), **kwargs)
 		# identifiers
 		if isinstance(i, self.lang.Identifier):
@@ -158,11 +156,16 @@ class Interpreter(object):
 			# return value in memory
 			else:
 				return i.eval(self.memory.heap)
-		elif isinstance(i, self.lang.List):
-			g = i.eval()
-			for k,v in enumerate(g):
-				g[k] = self.getval(self.eval(v))
-			return self.lang.List(g)
+		
+		elif isinstance(i, self.lang.Struct):
+			return i
+		
+		#elif isinstance(i, self.lang.List):
+		#	g = i.eval()
+		#	for k,v in enumerate(g):
+		#		g[k] = self.getval(self.eval(v))
+		#	return self.lang.List(g)
+		
 		# constants
 		elif isinstance(i, self.lang.Constant):
 			return i.eval()
@@ -173,8 +176,10 @@ class Interpreter(object):
 	def eval(self, i):
 	
 		if isinstance(i, self.lang.List):
-			return self.getval(i)
-	
+			for k,v in enumerate(i):
+				i[k] = self.eval(v)
+			return i
+			
 		if isinstance(i, list):
 			
 			# a control struct
