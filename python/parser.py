@@ -42,8 +42,6 @@ class Lexer(object):
 				# EOF
 				self.src.close()
 				break
-			else:
-				char = char.lower()
 			
 			c = re.match(self.syntax.delimiters, char)
 			
@@ -248,7 +246,7 @@ class Parser(object):
 				e.append(i)
 		
 		l.append(e)	
-		print l	
+	
 		return l
 		
 	

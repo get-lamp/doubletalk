@@ -10,7 +10,8 @@ class Interpreter(object):
 		def __init__(self):
 			self.instr 	= []
 			self.stack	= []
-			self.heap 	= {}	
+			#self.heap 	= {}
+			self.scope 	= [{}]	
 
 	def __init__(self):
 		self.parser 		= Parser(Doubletalk(), 'test.dtk')
@@ -40,7 +41,9 @@ class Interpreter(object):
 			# debugging
 			print 'Pntr %s %s' % ('\t'*2, self.pntr)
 			print 'Block %s %s' % ('\t'*2, self.block_stack)
-			print 'Heap %s %s' % ('\t'*2, self.memory.heap)
+			print 'Scope %s %s' % ('\t'*2, self.memory.scope)
+			
+			#print 'Heap %s %s' % ('\t'*2, self.memory.heap)
 			print 'Stack %s %s' % ('\t'*2, self.memory.stack)
 			print 'Read %s %s' % ('\t'*2, self.ctrl_stack)
 			print 'Instruction is %s %s' % ('\t'*1, self.memory.instr[self.pntr])
@@ -54,6 +57,25 @@ class Interpreter(object):
 			return False
 		self.pntr += 1
 		return r
+		
+	def scope(self):
+		return self.memory.scope[-1]
+	
+	def bind(self, i, v):
+		if isinstance(i, self.lang.Identifier):
+			i = i.word
+		self.scope()[i] = v
+	
+	def fetch(self, i):
+		return self.scope().get(i, None)
+	
+	def push_scope(self, namespace={}):
+		scp = namespace.copy()
+		scp.update(self.scope())
+		self.memory.scope.append(scp)
+	
+	def pull_scope(self):
+		return self.memory.scope.pop()
 
 
 	# absolute addressing
@@ -64,31 +86,35 @@ class Interpreter(object):
 	def move(self, i):
 		self.pntr += i
 	
-	def call(self, identifier, cargs=[]):
+	def call(self, identifier, arguments=[]):
 		print 'Calling procedure %s' % (identifier)
 		
-	
 		# push block
 		self.push_block('<proc>')
 		
 		# address & get signarure
-		address,fargs = self.memory.heap[identifier]
+		address,signature = self.scope()[identifier]
 		
-		if len(fargs) != len(cargs):
-			raise Exception('Function expects %s arguments. Given %s' % (len(fargs), len(cargs)))
-				
-			
-		scope = {self.eval(k).word:self.getval(self.eval(cargs[v])) for v,k in enumerate(fargs)}
-			
-		# push to stack
-		self.stack_push({'ret_addr': self.pntr, 'scope': scope})
+		#print self.eval(signature, ref=False)
+	
+		# check signature match with arguments		
+		if len(signature) != len(arguments):
+			raise Exception('Function expects %s arguments. Given %s' % (len(signature), len(arguments)))
+		
+		self.push_scope()
+					
+		for k,v in enumerate(self.getval(signature)):
+			self.bind(signature[k][0], arguments[k])
+					
+		# push return address to stack
+		self.stack_push({'ret_addr': self.pntr})
 		
 		self.goto(address)
 	
 	def endblock(self):
 		self.pull_block()
 		
-	def endproc(self):
+	def endcall(self):
 		
 		stack = self.stack_pull()
 		ret_addr = stack.get('ret_addr', None)
@@ -155,7 +181,7 @@ class Interpreter(object):
 				return i
 			# return value in memory
 			else:
-				return i.eval(self.memory.heap)
+				return i.eval(self.scope())
 		
 		# structs
 		elif isinstance(i, self.lang.Struct):
@@ -168,11 +194,11 @@ class Interpreter(object):
 		else:
 			return i
 	
-	def eval(self, i):
+	def eval(self, i, ref=False):
 	
 		if isinstance(i, self.lang.List):
 			for k,v in enumerate(i):
-				i[k] = self.eval(v)
+				i[k] = self.eval(v) if ref is True else self.getval(self.eval(v))
 			return i
 			
 		if isinstance(i, list):
@@ -180,7 +206,8 @@ class Interpreter(object):
 			# a control struct
 			if isinstance(i[OPERAND_L], self.lang.Control):
 				return i[OPERAND_L].eval(self, i[1:])
-		
+			
+			# ignore is read is not enabled
 			if not self.is_read_enabled():
 				return None
 			
@@ -199,10 +226,10 @@ class Interpreter(object):
 			
 			# assign operations
 			if isinstance(i[OPERATOR], self.lang.Assign):
-				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.memory.heap)
+				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.scope())
 			# any other binary operation
 			else:
-				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.memory.heap)
+				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.scope())
 				
 		else:
 			return i

@@ -105,7 +105,6 @@ class Doubletalk(object):
 		}
 	}
 	
-	# TODO: this class should not survive lexer
 	class Lexeme(object):
 		def __init__(self, word, pos=(None,None), **kwargs):
 			self.word = word
@@ -117,14 +116,6 @@ class Doubletalk(object):
 		def set(self, kwargs):
 			for i in kwargs:
 				setattr(self, i, kwargs[i])
-		
-		"""	
-		def __eq__(self, other):
-			return self.word == other
-		
-		def __ne__(self, other):
-			return self.word != other
-		"""
 		
 		def type(self):
 			return '<none>'
@@ -229,7 +220,7 @@ class Doubletalk(object):
 	class Assign(Operator):
 		def eval(self, left, right, heap):
 			heap[left.word] = right
-			return right
+			return left
 
 	class Equal(Operator):
 		def eval(self, left, right, scope):
@@ -347,7 +338,7 @@ class Doubletalk(object):
 				signature = parser.build(parser.expression())
 			except Exception as e:
 				signature = []
-							
+								
 			return [self, identifier, signature]
 		
 		def eval(self, interp, signature):
@@ -355,11 +346,11 @@ class Doubletalk(object):
 			
 			if len(signature) > 1:
 				arguments = signature.pop()
-						
+							
 			identifier = interp.getval(signature.pop(), ref=True)
 			
 			# store identifier & memory address
-			interp.memory.heap[interp.eval(identifier).word] = (interp.pntr, arguments)
+			interp.scope()[interp.eval(identifier).word] = (interp.pntr, arguments)
 			
 			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
@@ -377,7 +368,6 @@ class Doubletalk(object):
 			try:
 				signature = parser.build(parser.expression())
 			except Exception as e:
-				print parser.pending
 				signature = []
 	
 			#label = parser.expression()
@@ -389,7 +379,7 @@ class Doubletalk(object):
 			
 			# get arguments if any
 			if len(signature) > 1:
-				arguments = signature.pop()
+				arguments = interp.eval(signature.pop())
 							
 			# get identifier
 			identifier = interp.getval(signature.pop(), ref=True)
@@ -479,7 +469,7 @@ class Doubletalk(object):
 				interp.endif()
 			elif block == '<proc>':
 				print 'Ending procedure block'
-				interp.endproc()
+				interp.endcall()
 			else:
 				raise Exception('Unknown block type')
 

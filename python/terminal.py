@@ -23,9 +23,7 @@ class Terminal:
 
 			print '-' * 80
 		
-		
-			
-
+	
 	def getchar(self):
 		#Returns a single character from standard input
 		fd = sys.stdin.fileno()

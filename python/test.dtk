@@ -1,22 +1,14 @@
-
-z = 1,2,3
-
-prnt 'ack!'
-
-/*
 proc test x,y,z
-	prnt 'a'
-	prnt 'b'
-	prnt 'c'
+	prnt x
+	prnt y
+	prnt z
 end
 
-a = 3
+a = 99
 b = 4
 
-prnt 'OK'
+exec test a,b,a+b
 
-exec test [a],[b],[1]
-*/
 
 
 /*
@@ -56,8 +48,8 @@ end
 
 */
 
-/*
 
+/*
 prnt 'Ok'
 prnt 'Well...'
 
@@ -82,6 +74,6 @@ end
 prnt x
 
 prnt 'And this is finally over'
-*/
 
+*/
 
