@@ -140,6 +140,7 @@ class Parser(object):
 	
 	def EOF(self):
 		if len(self.blocks) > 1:
+			print self.blocks
 			raise Exception('Missing end statement')
 	
 		return False
@@ -250,7 +251,7 @@ class Parser(object):
 		return l
 		
 	
-	def block(self, until=None):
+	def block(self, until=None, leave=False):
 	
 		block = []
 		
@@ -271,6 +272,8 @@ class Parser(object):
 			# stop at delimiter
 			if isinstance(i, until):
 				self.delimiter = i
+				if leave is True:
+					self.pending.append(i)
 				return block
 			# add instruction to block
 			else:

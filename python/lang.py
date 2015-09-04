@@ -92,6 +92,7 @@ class Doubletalk(object):
 		'else':			lambda w,t: Doubletalk.Else(w,t),
 		'end':			lambda w,t: Doubletalk.End(w,t),
 		'procedure':	lambda w,t: Doubletalk.Procedure(w,t),
+		'def':			lambda w,t: Doubletalk.Def(w,t),
 		'exec':			lambda w,t: Doubletalk.Exec(w,t),
 		'include':		lambda w,t: Doubletalk.Include(w,t)
 	}
@@ -122,6 +123,9 @@ class Doubletalk(object):
 
 		def parse(self, parser, **kwargs):
 			pass
+
+		def __repr__(self):
+			return '<%s><%s>' % (self.__class__.__name__, self.word)
 		
 	# white space
 	class WhiteSpace(Lexeme):
@@ -345,7 +349,6 @@ class Doubletalk(object):
 			try:
 				# get arguments
 				self.signature = parser.build(parser.expression())
-
 			except Exception as e:
 				signature = []
 							
@@ -365,6 +368,44 @@ class Doubletalk(object):
 			
 			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
+
+	class Def(Procedure):
+		def __init__(self, word, pos=(None,None), **kwargs):
+			self.block = []
+			super(Doubletalk.Procedure, self).__init__(word, pos=(None,None), **kwargs)
+
+		def parse(self, parser, **kwargs):	
+			# parse identifier
+			self.identifier = [parser.next()]			
+			
+			try:
+				# get arguments
+				self.signature = parser.build(parser.expression())
+			except Exception as e:
+				signature = []
+
+			# get function block
+			self.block = parser.build(parser.block(until=Doubletalk.End, leave=True))
+
+			return [self, self.identifier, self.signature]
+
+		def eval(self, interp, signature):
+			
+			# store procedure address
+			self.address = interp.pntr
+
+			# eval procedure identifier, leaving room for dynamic procedures
+			self.identifier = interp.getval(self.identifier, ref=False)
+			
+			interp.eval(self.block)
+
+			exit()
+
+			# store identifier & memory address
+			interp.bind(self.identifier.word, self)
+
+			# skip function block. We are just declaring the function		
+			interp.move(self.length+1)
 				
 	
 	class Exec(Keyword):
@@ -380,9 +421,7 @@ class Doubletalk(object):
 				signature = parser.build(parser.expression())
 			except Exception as e:
 				signature = []
-	
-			#label = parser.expression()
-			
+				
 			return [self, identifier, signature]
 		
 		def eval(self, interp, signature):
@@ -433,9 +472,7 @@ class Doubletalk(object):
 			interp.push_read_enabled(bool(interp.eval(expr)))
 			interp.push_block(self)
 	
-		def __repr__(self):
-			return '<if>'
-	
+		
 	class Then(Keyword,Control):
 		
 		def type(self):
@@ -448,8 +485,6 @@ class Doubletalk(object):
 		def eval(self, interp, expr):
 			interp.push_read_enabled(True if interp.stack() else False)
 
-		def __repr__(self):
-			return '<then>'
 
 	class Else(Keyword,Control):
 		
@@ -463,8 +498,6 @@ class Doubletalk(object):
 		def eval(self, interp, expr):
 			interp.toggle_read_enabled()
 
-		def __repr__(self):
-			return '<else>'
 	
 	class End(Keyword,Control,Delimiter):
 		
@@ -487,8 +520,6 @@ class Doubletalk(object):
 			else:
 				raise Exception('Unknown block type')
 
-		def __repr__(self):
-			return '<end>'
 
 	#preprocesor
 	class Preprocessor(Lexeme):
@@ -518,10 +549,7 @@ class Doubletalk(object):
 		
 		def type(self):
 			return '<ident>'
-		
-		def __repr__(self):
-			return '<ident %s>' % (self.word)
-		
+				
 		def eval(self, heap):
 			return heap.get(self.word, None)
 

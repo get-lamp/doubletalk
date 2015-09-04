@@ -11,6 +11,14 @@ b = 4
 
 exec test a,b,a+b
 
+def func x,y,z
+	prnt 'Im'
+	prnt 'a'
+	prnt 'wot'
+end
+
+print 'Ack!'
+
 
 /*
 prnt 'Begin'

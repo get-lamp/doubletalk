@@ -103,7 +103,8 @@ class Interpreter(object):
 			raise Exception('Function expects %s arguments. Given %s' % (len(signature), len(arguments)))
 		
 		self.push_scope()
-					
+		
+		# assign calling args to procedure signature
 		for k,v in enumerate(self.getval(signature)):
 			self.bind(signature[k][0], arguments[k])
 					
@@ -136,7 +137,6 @@ class Interpreter(object):
 	
 	def push_block(self, block):
 		if not isinstance(block, self.lang.Block):
-			print block
 			raise Exception('Tried to push a non-block statement')
 		self.block_stack.append(block)
 	
@@ -217,6 +217,7 @@ class Interpreter(object):
 			
 			# a keyword
 			if isinstance(i[OPERAND_L], self.lang.Keyword):
+				print i
 				return i[OPERAND_L].eval(self, i[1:])
 	
 			# expressions
@@ -233,6 +234,7 @@ class Interpreter(object):
 				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.scope())
 			# any other binary operation
 			else:
+				print i
 				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.scope())
 				
 		else:
