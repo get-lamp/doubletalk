@@ -86,14 +86,14 @@ class Doubletalk(object):
 	}
 
 	keywords = {
-		'prnt':		lambda w,t: Doubletalk.Prnt(w,t),
-		'if':		lambda w,t: Doubletalk.If(w,t),
-		'then':		lambda w,t: Doubletalk.Then(w,t),
-		'else':		lambda w,t: Doubletalk.Else(w,t),
-		'end':		lambda w,t: Doubletalk.End(w,t),
-		'proc':		lambda w,t: Doubletalk.Proc(w,t),
-		'exec':		lambda w,t: Doubletalk.Exec(w,t),
-		'include':	lambda w,t: Doubletalk.Include(w,t)
+		'prnt':			lambda w,t: Doubletalk.Prnt(w,t),
+		'if':			lambda w,t: Doubletalk.If(w,t),
+		'then':			lambda w,t: Doubletalk.Then(w,t),
+		'else':			lambda w,t: Doubletalk.Else(w,t),
+		'end':			lambda w,t: Doubletalk.End(w,t),
+		'procedure':	lambda w,t: Doubletalk.Procedure(w,t),
+		'exec':			lambda w,t: Doubletalk.Exec(w,t),
+		'include':		lambda w,t: Doubletalk.Include(w,t)
 	}
 
 	expression = {
@@ -325,32 +325,43 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<keyword %s>' % (self.word)
 	
-	class Proc(Keyword,Block,Control):
-		
+	class Procedure(Keyword,Block,Control):
+
+		def __init__(self, word, pos=(None,None), **kwargs):
+			self.address	= None
+			self.identifier = None
+			self.signature 	= []
+			super(Doubletalk.Procedure, self).__init__(word, pos=(None,None), **kwargs)
+			
 		def type(self):
-			return '<proc>'
+			return '<procedure>'
 		
-		def parse(self, parser, **kwargs):
-		
-			identifier = [parser.next()]			
+		def parse(self, parser, **kwargs):	
+			print 'Procedure is being parsed'
+
+			# parse identifier
+			self.identifier = [parser.next()]			
 			
 			try:
-				signature = parser.build(parser.expression())
+				# get arguments
+				self.signature = parser.build(parser.expression())
+
 			except Exception as e:
 				signature = []
-								
-			return [self, identifier, signature]
+							
+			return [self, self.identifier, self.signature]
 		
 		def eval(self, interp, signature):
 			print "Procedure is being eval'd"
-			
-			if len(signature) > 1:
-				arguments = signature.pop()
-							
-			identifier = interp.getval(signature.pop(), ref=True)
-			
+
+			# store procedure address
+			self.address = interp.pntr
+
+			# eval procedure identifier, leaving room for dynamic procedures
+			self.identifier = interp.getval(self.identifier, ref=False)
+				
 			# store identifier & memory address
-			interp.scope()[interp.eval(identifier).word] = (interp.pntr, arguments)
+			interp.bind(self.identifier.word, self)
 			
 			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
@@ -375,17 +386,20 @@ class Doubletalk(object):
 			return [self, identifier, signature]
 		
 		def eval(self, interp, signature):
-			print "Procedure is being call'd"
+			print "Procedureedure is being call'd"
 			
 			# get arguments if any
 			if len(signature) > 1:
 				arguments = interp.eval(signature.pop())
-							
-			# get identifier
+			
+			# get identifier from instruction line
 			identifier = interp.getval(signature.pop(), ref=True)
 			
+			# get procedure from scope
+			procedure = interp.fetch(identifier)
+			
 			# call	
-			interp.call(identifier.word, arguments)
+			interp.call(procedure, arguments)
 						
 			
 	class Prnt(Keyword):
@@ -417,7 +431,7 @@ class Doubletalk(object):
 
 		def eval(self, interp, expr):
 			interp.push_read_enabled(bool(interp.eval(expr)))
-			interp.push_block('<if>')
+			interp.push_block(self)
 	
 		def __repr__(self):
 			return '<if>'
@@ -465,9 +479,9 @@ class Doubletalk(object):
 		
 			block = interp.block()
 			
-			if block == '<if>':
+			if isinstance(block, Doubletalk.If):
 				interp.endif()
-			elif block == '<proc>':
+			elif isinstance(block, Doubletalk.Procedure):
 				print 'Ending procedure block'
 				interp.endcall()
 			else:

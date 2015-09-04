@@ -1,5 +1,6 @@
+// test
 
-proc test x,y,z
+procedure test x,y,z
 	prnt x
 	prnt y
 	prnt z

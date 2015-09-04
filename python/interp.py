@@ -67,6 +67,8 @@ class Interpreter(object):
 		self.scope()[i] = v
 	
 	def fetch(self, i):
+		if isinstance(i, self.lang.Identifier):
+			i = i.word
 		return self.scope().get(i, None)
 	
 	def push_scope(self, namespace={}):
@@ -86,16 +88,15 @@ class Interpreter(object):
 	def move(self, i):
 		self.pntr += i
 	
-	def call(self, identifier, arguments=[]):
-		print 'Calling procedure %s' % (identifier)
-		
+	def call(self, procedure, arguments):
+		print 'Calling procedure %s' % (procedure.identifier)
+
 		# push block
-		self.push_block('<proc>')
+		self.push_block(procedure)
 		
 		# address & get signarure
-		address,signature = self.scope()[identifier]
-		
-		#print self.eval(signature, ref=False)
+		address = procedure.address
+		signature = procedure.signature
 	
 		# check signature match with arguments		
 		if len(signature) != len(arguments):
@@ -134,6 +135,9 @@ class Interpreter(object):
 		return self.block_stack[-1]
 	
 	def push_block(self, block):
+		if not isinstance(block, self.lang.Block):
+			print block
+			raise Exception('Tried to push a non-block statement')
 		self.block_stack.append(block)
 	
 	def pull_block(self):
