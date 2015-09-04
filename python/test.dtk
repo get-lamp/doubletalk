@@ -1,13 +1,10 @@
 
 z = 1,2,3
 
-prnt 'ack!'
-
-/*
 proc test x,y,z
-	prnt 'a'
-	prnt 'b'
-	prnt 'c'
+	prnt x
+	prnt y
+	prnt z
 end
 
 a = 3
@@ -15,8 +12,8 @@ b = 4
 
 prnt 'OK'
 
-exec test [a],[b],[1]
-*/
+exec test [a],[b],[a+b]
+
 
 
 /*
