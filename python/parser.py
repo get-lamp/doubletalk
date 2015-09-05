@@ -140,8 +140,9 @@ class Parser(object):
 	
 	def EOF(self):
 		if len(self.blocks) > 1:
-			print self.blocks
-			raise Exception('Missing end statement')
+			pass
+			#print self.blocks
+			#raise Exception('Missing end statement')
 	
 		return False
 		

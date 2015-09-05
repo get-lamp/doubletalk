@@ -15,7 +15,7 @@ class Terminal:
 			if ch == 'q':
 				break
 				
-			instr = self.interp.execute()
+			instr = self.interp.exec_next()
 			
 			if instr is False:
 				print 'EOF'

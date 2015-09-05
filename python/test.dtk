@@ -1,23 +1,25 @@
 // test
 
-procedure test x,y,z
+procedure test
+	prnt 9
+	prnt 9
+	prnt 9
+end
+
+exec test
+
+/*
+def func x,y,z
 	prnt x
 	prnt y
 	prnt z
+	
+	x+y+z
 end
 
-a = 99
-b = 4
-
-exec test a,b,a+b
-
-def func x,y,z
-	prnt 'Im'
-	prnt 'a'
-	prnt 'wot'
-end
-
-print 'Ack!'
+r = func [1,2,3] 
+*/
+prnt 'Ack!'
 
 
 /*
@@ -27,9 +29,9 @@ prnt 'Begin'
 
 z = ((1+3) * 100) / 5
 
-proc a_test_procedure	
+procedure a_test_procedure	
 
-	proc nested_procedure
+	procedure nested_procedure
 		prnt 'Im defining a procedure here'
 		if True:
 			prnt "Can't believe this is working"

@@ -35,7 +35,14 @@ class Interpreter(object):
 			# append to instruction memory block
 			self.memory.instr.append(gtree)
 		
-	def execute(self):
+	def exec_all(self, source=[], build=True):
+	
+		for i in source:
+			r = self.eval(i) if build is None else self.eval(self.parser.build(i))
+			
+		return r
+	
+	def exec_next(self):
 
 		try:
 			# debugging
@@ -79,7 +86,6 @@ class Interpreter(object):
 	def pull_scope(self):
 		return self.memory.scope.pop()
 
-
 	# absolute addressing
 	def goto(self, n):
 		self.pntr = n;
@@ -88,15 +94,15 @@ class Interpreter(object):
 	def move(self, i):
 		self.pntr += i
 	
-	def call(self, procedure, arguments):
-		print 'Calling procedure %s' % (procedure.identifier)
+	def call(self, routine, arguments):
+		print 'Calling routine %s' % (routine.identifier)
 
 		# push block
-		self.push_block(procedure)
+		self.push_block(routine)
 		
 		# address & get signarure
-		address = procedure.address
-		signature = procedure.signature
+		address = routine.address
+		signature = routine.signature
 	
 		# check signature match with arguments		
 		if len(signature) != len(arguments):
@@ -104,30 +110,43 @@ class Interpreter(object):
 		
 		self.push_scope()
 		
-		# assign calling args to procedure signature
+		# assign calling args to routine signature
 		for k,v in enumerate(self.getval(signature)):
 			self.bind(signature[k][0], arguments[k])
-					
-		# push return address to stack
-		self.stack_push({'ret_addr': self.pntr})
 		
-		self.goto(address)
+		# is function. Return last statement eval
+		if isinstance(routine, self.lang.Def):
+			ret = self.exec_all(routine.block)
+			print ret
+			self.endcall()
+			return ret
+		# is procedure. Return nothing. Move instruction pointer
+		else:
+			# push return address to stack
+			self.stack_push({'ret_addr': self.pntr})
+			self.goto(address)
+		
+	
+	def endcall(self):
+		
+		ret_addr = None
+		
+		if len(self.memory.stack) > 0:
+			stack = self.stack_pull()
+			ret_addr = stack.get('ret_addr', None)
+		
+		self.endblock()
+		self.pull_scope()
+				
+		if ret_addr is None:
+			return
+		
+		self.goto(ret_addr)	
+	
 	
 	def endblock(self):
 		self.pull_block()
 		
-	def endcall(self):
-		
-		stack = self.stack_pull()
-		ret_addr = stack.get('ret_addr', None)
-		
-		if ret_addr is None:
-			raise Exception('Return address missing')
-		
-		self.endblock()
-		self.goto(ret_addr)	
-			
-			
 	def endif(self):
 		self.pull_read_enabled()
 		self.endblock()
@@ -217,7 +236,6 @@ class Interpreter(object):
 			
 			# a keyword
 			if isinstance(i[OPERAND_L], self.lang.Keyword):
-				print i
 				return i[OPERAND_L].eval(self, i[1:])
 	
 			# expressions
@@ -229,12 +247,15 @@ class Interpreter(object):
 			if len(i) < 2:
 				return i.pop()
 			
+			# binary operation
+			if len(i) < 3:
+				return i.pop(0).eval(self.scope(), call=i.pop(0), interp=self)
+			
 			# assign operations
 			if isinstance(i[OPERATOR], self.lang.Assign):
 				return i[OPERATOR].eval(i[OPERAND_L], self.getval(i[OPERAND_R]), self.scope())
 			# any other binary operation
 			else:
-				print i
 				return i[OPERATOR].eval(self.getval(i[OPERAND_L]), self.getval(i[OPERAND_R]), self.scope())
 				
 		else:

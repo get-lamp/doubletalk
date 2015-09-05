@@ -100,6 +100,7 @@ class Doubletalk(object):
 	expression = {
 		r'<delim>|<bracket>': lambda: Doubletalk.expression,
 		r'<const>|<ident>': {
+			r'<bracket>|<const>|<ident>': lambda: Doubletalk.expression[r'<const>|<ident>'],
 			'<op>': lambda: Doubletalk.expression,
 			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>'],
 			'<comma>': lambda: Doubletalk.expression
@@ -385,7 +386,7 @@ class Doubletalk(object):
 				signature = []
 
 			# get function block
-			self.block = parser.build(parser.block(until=Doubletalk.End, leave=True))
+			self.block = parser.block(until=Doubletalk.End)
 
 			return [self, self.identifier, self.signature]
 
@@ -396,16 +397,12 @@ class Doubletalk(object):
 
 			# eval procedure identifier, leaving room for dynamic procedures
 			self.identifier = interp.getval(self.identifier, ref=False)
-			
-			interp.eval(self.block)
-
-			exit()
-
+					
 			# store identifier & memory address
 			interp.bind(self.identifier.word, self)
-
-			# skip function block. We are just declaring the function		
-			interp.move(self.length+1)
+		
+		def call(self, interp, arguments):			
+			return interp.call(self, arguments)
 				
 	
 	class Exec(Keyword):
@@ -425,8 +422,7 @@ class Doubletalk(object):
 			return [self, identifier, signature]
 		
 		def eval(self, interp, signature):
-			print "Procedureedure is being call'd"
-			
+	
 			# get arguments if any
 			if len(signature) > 1:
 				arguments = interp.eval(signature.pop())
@@ -435,10 +431,9 @@ class Doubletalk(object):
 			identifier = interp.getval(signature.pop(), ref=True)
 			
 			# get procedure from scope
-			procedure = interp.fetch(identifier)
-			
-			# call	
-			interp.call(procedure, arguments)
+			routine = interp.fetch(identifier)
+		
+			return interp.call(routine, arguments)
 						
 			
 	class Prnt(Keyword):
@@ -517,7 +512,11 @@ class Doubletalk(object):
 			elif isinstance(block, Doubletalk.Procedure):
 				print 'Ending procedure block'
 				interp.endcall()
+			elif isinstance(block, Doubletalk.Def):
+				print 'Ending def block'
+				interp.endcall()
 			else:
+				print interp.block_stack
 				raise Exception('Unknown block type')
 
 
@@ -550,8 +549,12 @@ class Doubletalk(object):
 		def type(self):
 			return '<ident>'
 				
-		def eval(self, heap):
-			return heap.get(self.word, None)
+		def eval(self, scope, call=None, interp=None):
+			v = scope.get(self.word, None)
+			if call is not None:
+				return v.call(interp, call)
+			else:
+				return v
 
 	# entity
 	class GameObject(Lexeme):
@@ -599,8 +602,6 @@ class Doubletalk(object):
 					return False
 			return True
 		
-		
-			
 		def hint(self):
 			if self.legal is None:
 				return None
