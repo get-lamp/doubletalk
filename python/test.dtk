@@ -1,2 +1,10 @@
+/*
 WAIT @Karl UNTIL 1+1
 WAIT @Joseph UNTIL 5
+*/
+
+if TAILED @Karl
+	prnt 'Yep'
+else
+	prnt 'Nop'
+

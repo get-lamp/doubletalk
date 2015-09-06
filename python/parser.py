@@ -327,8 +327,8 @@ class Parser(object):
 				expression.push(lexeme)
 			else:
 				self.pending.append(lexeme)
-				#print 'Expression rejected %s' % (lexeme)
-				#print 'Expecting %s' % (expression.hint())
+				print 'Expression rejected %s' % (lexeme)
+				print 'Expecting %s' % (expression.hint())
 				#raise Exception('Unexpected %s' % (lexeme))				
 				break	
 		return expression
@@ -435,8 +435,13 @@ class Parser(object):
 				return [i, self.build(s)]
 				
 			# operator delimits terms
-			elif isinstance(i, self.lang.Operator):
-				return [n, i, self.build(s)]
+			elif isinstance(i, (self.lang.Operator)):
+				# unary operator
+				if isinstance(i, self.lang.UnaryOperator):
+					return [i, self.build(s)]
+				# binary operator
+				else:
+					return [n, i, self.build(s)]
 			else:
 				n.append(i)
 				

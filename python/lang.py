@@ -119,7 +119,7 @@ class Doubletalk(object):
 	}
 	
 	builtins = {
-		'SURVEILLED':	lambda w,t: Doubletalk.Tailed(w,t)
+		'TAILED':		lambda w,t: Doubletalk.Tailed(w,t)
 	}
 	
 	clause = {
@@ -127,11 +127,12 @@ class Doubletalk(object):
 	}
 
 	expression = {
+		r'<unary-op>': lambda: Doubletalk.expression,
 		r'<delim>|<bracket>': lambda: Doubletalk.expression,
-		r'<const>|<ident>|<built-in-function>': {
-			r'<bracket>|<const>|<ident>|<built-in-function>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in-function>'],
+		r'<const>|<ident>|<built-in>': {
+			r'<bracket>|<const>|<ident>|<built-in>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in>'],
 			'<op>': lambda: Doubletalk.expression,
-			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in-function>'],
+			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in>'],
 			'<comma>': lambda: Doubletalk.expression
 		}
 	}
@@ -257,9 +258,19 @@ class Doubletalk(object):
 		def eval(self, left, right):
 			pass
 	
-	class Not(Operator):
-		def eval(self, left, right, heap):
-			return left != right
+	class UnaryOperator(Operator):
+		def type(self):
+			return '<unary-op>'
+
+		def __repr__(self):
+			return '<unary-op %s>' % (self.word)
+		
+		def eval(self, operand):
+			pass
+	
+	class Not(UnaryOperator):
+		def eval(self, scope, arguments=None, interp=None):
+			return not interp.getval(interp.eval(arguments))
 
 	class Assign(Operator):
 		def eval(self, left, right, heap):
@@ -600,11 +611,6 @@ class Doubletalk(object):
 		def __init__(self, *args, **kwargs):
 			super(Doubletalk.Tune, self).__init__(*args, **kwargs)
 			
-	
-	class BuiltInFunction(Lexeme):
-		def type(self):
-			return '<built-in-function>'
-	
 	class Wait(Keyword):
 		
 		def type(self):
@@ -623,13 +629,20 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<wait>'
 	
-	class Tailed(BuiltInFunction):
-		def parse(self, parser, **kwargs):
-			return [self]
-			
-		def eval(self, interp, *args):
-			return True
-			
+	class BuiltIn(Def):
+		def type(self):
+			return '<built-in>'
+		
+		def eval(self, interp, signature):
+			return self.bind(signature)
+					
+	class Tailed(BuiltIn):
+		
+		def __init__(self, *args, **kwargs):
+			self.bind = DM.testme
+			super(Doubletalk.Tailed, self).__init__(*args, **kwargs)	
+				
+				
 	class Prnt(Keyword):
 		
 		def type(self):
@@ -646,7 +659,10 @@ class Doubletalk(object):
 			return '<prnt>'
 	
 
-	#preprocesor
+	"""
+	PREPROCESSOR
+	
+	"""
 	class Preprocessor(Lexeme):
 		pass
 		
@@ -756,11 +772,17 @@ class Doubletalk(object):
 		def type(self):
 			return '<clause>'
 		
-	class Expression(Evaluable, Grammar):
+	class Expression(Grammar):
 		def __init__(self):
 			super(Doubletalk.Expression, self).__init__(Doubletalk.expression)
 		
 		def type(self):
 			return '<expression>'
 	
-	
+
+class DM(object):
+	@staticmethod
+	def testme(*args):
+		print "I'm the DM! Your God speaking. You said:"
+		print args
+		return True
