@@ -3,6 +3,7 @@ import StringIO, re
 # 	TODO 
 #	weird delimiter characters behavior 
 #	get rid of tags. Use isinstace() instead
+#	check for Evaluable & Callable classes
 
 class Doubletalk(object):
 
@@ -28,8 +29,21 @@ class Doubletalk(object):
 	r_single_quote 	= r"[\']"
 	r_float			= r'^[0-9]*\.[0-9]+$'
 	r_int	 		= r'^[0-9]+$'
+	r_not 			= r'^NOT$'
 	r_identifier 	= r'[_a-zA-Z][_a-zA-Z0-9]*'
 	r_atsign		= r'[@]'
+	
+	@staticmethod
+	def identifier(w,t):
+		if w in Doubletalk.keywords:
+			return Doubletalk.keywords[w](w,t)
+		elif w in Doubletalk.builtins:
+			return Doubletalk.builtins[w](w,t)
+		elif w in Doubletalk.parameters:
+			return Doubletalk.parameters[w](w,t)
+		else:
+			return Doubletalk.Identifier(w,t)
+		
 	
 	symbols = {
 		r_space: 			lambda w,t: Doubletalk.Space(w,t),
@@ -77,11 +91,11 @@ class Doubletalk(object):
 			r_int: 			lambda w,t: Doubletalk.Integer(w,t),
 			None:			lambda w,t: Doubletalk.Subtract(w,t)
 		},
-		
-		r_identifier:		lambda w,t: Doubletalk.keywords[w](w,t) if w in Doubletalk.keywords else Doubletalk.Identifier(w,t),
+		r_not:				lambda w,t: Doubletalk.Not(w,t),
+		r_identifier:		lambda w,t: Doubletalk.identifier(w,t),
 		r_atsign: {
-			r_identifier:	lambda t: Doubletalk.Character(w,t),
-			None: 			lambda t: Doubletalk.Ego(w,t)
+			r_identifier:	lambda w,t: Doubletalk.Character(w,t),
+			None: 			lambda w,t: Doubletalk.Ego(w,t)
 		}
 	}
 
@@ -94,18 +108,39 @@ class Doubletalk(object):
 		'procedure':	lambda w,t: Doubletalk.Procedure(w,t),
 		'def':			lambda w,t: Doubletalk.Def(w,t),
 		'exec':			lambda w,t: Doubletalk.Exec(w,t),
-		'include':		lambda w,t: Doubletalk.Include(w,t)
+		'include':		lambda w,t: Doubletalk.Include(w,t),
+		'WAIT':			lambda w,t: Doubletalk.Wait(w,t)
+	}
+	
+	parameters = {
+		'UNTIL':		lambda w,t: Doubletalk.Until(w,t),
+		'BY':			lambda w,t: Doubletalk.By(w,t),
+		'TUNE':			lambda w,t: Doubletalk.Tune(w,t),
+	}
+	
+	builtins = {
+		'SURVEILLED':	lambda w,t: Doubletalk.Tailed(w,t)
+	}
+	
+	clause = {
+		r'<parameter>':	lambda: Doubletalk.expression
 	}
 
 	expression = {
 		r'<delim>|<bracket>': lambda: Doubletalk.expression,
-		r'<const>|<ident>': {
-			r'<bracket>|<const>|<ident>': lambda: Doubletalk.expression[r'<const>|<ident>'],
+		r'<const>|<ident>|<built-in-function>': {
+			r'<bracket>|<const>|<ident>|<built-in-function>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in-function>'],
 			'<op>': lambda: Doubletalk.expression,
-			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>'],
+			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in-function>'],
 			'<comma>': lambda: Doubletalk.expression
 		}
 	}
+	
+	class Evaluable(object):
+		pass
+	
+	class Callable(object):
+		pass
 	
 	class Lexeme(object):
 		def __init__(self, word, pos=(None,None), **kwargs):
@@ -221,6 +256,10 @@ class Doubletalk(object):
 		
 		def eval(self, left, right):
 			pass
+	
+	class Not(Operator):
+		def eval(self, left, right, heap):
+			return left != right
 
 	class Assign(Operator):
 		def eval(self, left, right, heap):
@@ -311,6 +350,20 @@ class Doubletalk(object):
 
 		def __repr__(self):
 			return '<s-quote>'
+	
+	# identifiers
+	class Identifier(Lexeme):
+		
+		def type(self):
+			return '<ident>'
+				
+		def eval(self, scope, arguments=None, interp=None):
+			v = scope.get(self.word, None)
+			if arguments is not None:
+				return v.call(arguments, interp)
+			else:
+				return v
+				
 
 	# keywords
 	class Block(object):
@@ -321,6 +374,7 @@ class Doubletalk(object):
 			
 	class Control(object):
 		pass
+	
 		
 	class Keyword(Lexeme):
 		
@@ -330,12 +384,12 @@ class Doubletalk(object):
 		def __repr__(self):
 			return '<keyword %s>' % (self.word)
 	
-	class Procedure(Keyword,Block,Control):
+	class Procedure(Keyword,Callable,Block,Control):
 
 		def __init__(self, word, pos=(None,None), **kwargs):
 			self.address	= None
 			self.identifier = None
-			self.signature 	= []
+			self.signature 	= Doubletalk.List()
 			super(Doubletalk.Procedure, self).__init__(word, pos=(None,None), **kwargs)
 			
 		def type(self):
@@ -345,13 +399,17 @@ class Doubletalk(object):
 			print 'Procedure is being parsed'
 
 			# parse identifier
-			self.identifier = [parser.next()]			
+			i = parser.next()
+			if not isinstance(i, Doubletalk.Identifier):
+				raise Exception('Procedure must have an identifier')
+			else:
+				self.identifier = [i]
 			
 			try:
 				# get arguments
 				self.signature = parser.build(parser.expression())
 			except Exception as e:
-				signature = []
+				self.signature = Doubletalk.List()
 							
 			return [self, self.identifier, self.signature]
 		
@@ -369,6 +427,10 @@ class Doubletalk(object):
 			
 			# skip function block. We are just declaring the function		
 			interp.move(self.length+1)
+		
+		def call(self):
+			return interp.call(self, arguments)
+			
 
 	class Def(Procedure):
 		def __init__(self, word, pos=(None,None), **kwargs):
@@ -383,8 +445,8 @@ class Doubletalk(object):
 				# get arguments
 				self.signature = parser.build(parser.expression())
 			except Exception as e:
-				signature = []
-
+				self.signature = Doubletalk.List()
+				
 			# get function block
 			self.block = parser.block(until=Doubletalk.End)
 
@@ -401,7 +463,7 @@ class Doubletalk(object):
 			# store identifier & memory address
 			interp.bind(self.identifier.word, self)
 		
-		def call(self, interp, arguments):			
+		def call(self, arguments, interp):			
 			return interp.call(self, arguments)
 				
 	
@@ -415,43 +477,30 @@ class Doubletalk(object):
 			identifier = [parser.next()]			
 			
 			try:
-				signature = parser.build(parser.expression())
+				arguments = parser.build(parser.expression())
 			except Exception as e:
-				signature = []
+				arguments = Doubletalk.List()
 				
-			return [self, identifier, signature]
+			return [self, identifier, arguments]
 		
 		def eval(self, interp, signature):
-	
+		
 			# get arguments if any
 			if len(signature) > 1:
 				arguments = interp.eval(signature.pop())
-			
+		
 			# get identifier from instruction line
 			identifier = interp.getval(signature.pop(), ref=True)
 			
 			# get procedure from scope
 			routine = interp.fetch(identifier)
+			
+			if not isinstance(routine, Doubletalk.Callable):
+				raise Exception('Not a callable object')
 		
 			return interp.call(routine, arguments)
-						
 			
-	class Prnt(Keyword):
-		
-		def type(self):
-			return '<prnt>'
-		
-		def parse(self, parser, **kwargs):
-			text = parser.expression()
-			return [self, text]
-		
-		def eval(self, interp, expression):
-			print interp.getval(interp.eval(expression))
-
-		def __repr__(self):
-			return '<prnt>'
 	
-
 	class If(Keyword,Block,Control):
 	
 		def type(self):
@@ -518,7 +567,84 @@ class Doubletalk(object):
 			else:
 				print interp.block_stack
 				raise Exception('Unknown block type')
+	
+	class Parameter(Lexeme):
+	
+		def __init__(self, *args, **kwargs):
+			super(Doubletalk.Parameter, self).__init__(*args, **kwargs)
+			
+		def eval(self, scope, arguments=None, interp=None):
+			return interp.eval(arguments)
+			
+		def type(self):
+			return '<parameter>'
+		
+		def __repr__(self):
+			return '<parameter>'
+			
+	
+	class Until(Parameter):
+				
+		def __init__(self, *args, **kwargs):
+			super(Doubletalk.Until, self).__init__(*args, **kwargs)
+		
+		
+	class By(Parameter):
+		
+		def __init__(self, *args, **kwargs):
+			super(Doubletalk.By, self).__init__(*args, **kwargs)
+		
+	
+	class Tune(Parameter):
+		
+		def __init__(self, *args, **kwargs):
+			super(Doubletalk.Tune, self).__init__(*args, **kwargs)
+			
+	
+	class BuiltInFunction(Lexeme):
+		def type(self):
+			return '<built-in-function>'
+	
+	class Wait(Keyword):
+		
+		def type(self):
+			return '<wait>'
+		
+		def parse(self, parser, **kwargs):
+			self.condition	= parser.build(parser.expression())
+			self.until		= parser.build(parser.clause(Doubletalk.Until))
+			return [self, self.condition, self.until]
+		
+		def eval(self, interp, expression):
+			c = interp.eval(self.condition)
+			u = interp.eval(self.until)
+			print "WAITING %s UNTIL %s" % (c, u)
 
+		def __repr__(self):
+			return '<wait>'
+	
+	class Tailed(BuiltInFunction):
+		def parse(self, parser, **kwargs):
+			return [self]
+			
+		def eval(self, interp, *args):
+			return True
+			
+	class Prnt(Keyword):
+		
+		def type(self):
+			return '<prnt>'
+		
+		def parse(self, parser, **kwargs):
+			text = parser.expression()
+			return [self, text]
+		
+		def eval(self, interp, expression):
+			print interp.getval(interp.eval(expression))
+
+		def __repr__(self):
+			return '<prnt>'
+	
 
 	#preprocesor
 	class Preprocessor(Lexeme):
@@ -543,25 +669,16 @@ class Doubletalk(object):
 			print source
 			exit(1)
 		
-	# identifiers
-	class Identifier(Lexeme):
-		
-		def type(self):
-			return '<ident>'
-				
-		def eval(self, scope, call=None, interp=None):
-			v = scope.get(self.word, None)
-			if call is not None:
-				return v.call(interp, call)
-			else:
-				return v
-
 	# entity
 	class GameObject(Lexeme):
 		pass
 
 	class Character(GameObject):
-		pass
+		def type(self):
+			return '<ident>'
+			
+		def __repr__(self):
+			return '<character>'
 
 	class Ego(Character):
 		pass
@@ -632,16 +749,18 @@ class Doubletalk(object):
 			# close
 			return False
 		
-	class Statement(Grammar):
+	class Clause(Grammar):
 		def __init__(self):
-			super(Doubletalk.Statement, self).__init__(Doubletalk.statement)
+			super(Doubletalk.Clause, self).__init__(Doubletalk.clause)
 		
 		def type(self):
-			return '<statement>'
+			return '<clause>'
 		
-	class Expression(Grammar):
+	class Expression(Evaluable, Grammar):
 		def __init__(self):
 			super(Doubletalk.Expression, self).__init__(Doubletalk.expression)
 		
 		def type(self):
 			return '<expression>'
+	
+	

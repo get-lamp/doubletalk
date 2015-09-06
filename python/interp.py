@@ -10,7 +10,6 @@ class Interpreter(object):
 		def __init__(self):
 			self.instr 	= []
 			self.stack	= []
-			#self.heap 	= {}
 			self.scope 	= [{}]	
 
 	def __init__(self):
@@ -110,9 +109,12 @@ class Interpreter(object):
 		
 		self.push_scope()
 		
-		# assign calling args to routine signature
-		for k,v in enumerate(self.getval(signature)):
-			self.bind(signature[k][0], arguments[k])
+		if len(signature) > 0:
+			# assign calling args to routine signature
+			for k,v in enumerate(self.getval(signature)):
+				self.bind(signature[k][0], arguments[k])
+		
+		
 		
 		# is function. Return last statement eval
 		if isinstance(routine, self.lang.Def):
@@ -176,7 +178,7 @@ class Interpreter(object):
 	
 	def toggle_read_enabled(self):
 		# if parent block isn't executable, child blocks aren't neither
-		if not self.ctrl_stack[-1:][0]: 
+		if not self.ctrl_stack[-2:-1][0]: 
 			self.ctrl_stack[-1] = False
 		else:
 			self.ctrl_stack[-1] = not self.ctrl_stack[-1]
@@ -224,8 +226,8 @@ class Interpreter(object):
 				i[k] = self.eval(v) if ref is True else self.getval(self.eval(v))
 			return i
 			
-		if isinstance(i, list):
-			
+		if isinstance(i, list) and len(i) > 0:
+		
 			# a control struct
 			if isinstance(i[OPERAND_L], self.lang.Control):
 				return i[OPERAND_L].eval(self, i[1:])
@@ -247,9 +249,9 @@ class Interpreter(object):
 			if len(i) < 2:
 				return i.pop()
 			
-			# binary operation
+			# unary operation
 			if len(i) < 3:
-				return i.pop(0).eval(self.scope(), call=i.pop(0), interp=self)
+				return i.pop(0).eval(self.scope(), arguments=i.pop(0), interp=self)
 			
 			# assign operations
 			if isinstance(i[OPERATOR], self.lang.Assign):

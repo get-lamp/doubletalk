@@ -1,5 +1,6 @@
 import tty, termios, sys
 from lang import *
+import inspect
 
 class Lexer(object):
 
@@ -127,7 +128,9 @@ class Lexer(object):
 			# return a typed lexeme
 			return tree(token.word, (token.line, token.char))
 
-	
+"""
+	PARSER
+"""	
 class Parser(object):
 
 	def __init__(self, lang, source, is_file=True):
@@ -258,6 +261,7 @@ class Parser(object):
 		
 		while True:
 		
+			# parse.Stop if found delimiter
 			i = self.parse(until=until)
 						
 			# EOF
@@ -273,6 +277,7 @@ class Parser(object):
 			# stop at delimiter
 			if isinstance(i, until):
 				self.delimiter = i
+				# leave delimiter for further parsing
 				if leave is True:
 					self.pending.append(i)
 				return block
@@ -322,11 +327,37 @@ class Parser(object):
 				expression.push(lexeme)
 			else:
 				self.pending.append(lexeme)
-				print 'Expression rejected %s' % (lexeme)
-				print 'Expecting %s' % (expression.hint())
-				raise Exception('Unexpected %s' % (lexeme))				
-							
+				#print 'Expression rejected %s' % (lexeme)
+				#print 'Expecting %s' % (expression.hint())
+				#raise Exception('Unexpected %s' % (lexeme))				
+				break	
 		return expression
+		
+	
+	def clause(self, expecting):
+	
+		clause = self.lang.Clause()
+		
+		while True:
+			lexeme = self.next()
+			
+			if len(clause) == 0 and not isinstance(lexeme, expecting):
+				self.pending.append(lexeme)
+				return clause
+			
+			# EOF
+			if lexeme is False:
+				# return last expression
+				if len(clause) > 0:
+					return clause
+				else:
+					return False
+			
+			if not clause.push(lexeme):
+				self.pending.append(lexeme)
+				break
+				
+		return clause
 	
 	
 	
@@ -357,17 +388,16 @@ class Parser(object):
 			# add to instruction counter
 			self.count += 1
 			return self.expression()
-
+		elif isinstance(lexeme, (self.lang.Parameter)):
+			raise Exception('Misplaced parameter')
 		else:
 			# newline, tab & beyond
 			return self.parse(until=until)
 		
 		
 	
-	def build(self, s=None):
+	def build(self, s):
 		
-		# s as sentence. If s is None, parse self as the tree root
-		s = s if s is not None else self
 		# n as the node we are building
 		n = []
 		
@@ -398,8 +428,12 @@ class Parser(object):
 					n.append(self.lang.List(self.list(s)))					
 				# closing brackets are dispossed by self.list, so they shouldn't come up here
 				else:
-					raise Exception('Unexpected bracket at %s' % (i.token.line))		
+					raise Exception('Unexpected bracket at %s' % (i.token.line))
 			
+			# parameter
+			elif isinstance(i, self.lang.Parameter):
+				return [i, self.build(s)]
+				
 			# operator delimits terms
 			elif isinstance(i, self.lang.Operator):
 				return [n, i, self.build(s)]
