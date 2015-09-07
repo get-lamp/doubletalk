@@ -114,8 +114,6 @@ class Interpreter(object):
 			for k,v in enumerate(self.getval(signature)):
 				self.bind(signature[k][0], arguments[k])
 		
-		
-		
 		# is function. Return last statement eval
 		if isinstance(routine, self.lang.Def):
 			ret = self.exec_all(routine.block)

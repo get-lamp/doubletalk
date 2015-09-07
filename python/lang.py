@@ -1,11 +1,30 @@
 import StringIO, re
 
+class DM(object):
+	@staticmethod
+	def testme(*args):
+		print "I'm the DM! Your God speaking. You said:"
+		print args
+		return True
+
 # 	TODO 
 #	weird delimiter characters behavior 
 #	get rid of tags. Use isinstace() instead
 #	check for Evaluable & Callable classes
 
 class Doubletalk(object):
+	
+	"""
+	EXCEPTIONS
+	
+	"""
+	
+	
+	
+	"""
+	REGEX
+	
+	"""
 
 	delimiters = "[\"\':!,;+*^&@#$%&\-\\/\|=$()?<>\s\[\]]"
 	
@@ -102,7 +121,6 @@ class Doubletalk(object):
 	keywords = {
 		'prnt':			lambda w,t: Doubletalk.Prnt(w,t),
 		'if':			lambda w,t: Doubletalk.If(w,t),
-		'then':			lambda w,t: Doubletalk.Then(w,t),
 		'else':			lambda w,t: Doubletalk.Else(w,t),
 		'end':			lambda w,t: Doubletalk.End(w,t),
 		'procedure':	lambda w,t: Doubletalk.Procedure(w,t),
@@ -118,8 +136,12 @@ class Doubletalk(object):
 		'TUNE':			lambda w,t: Doubletalk.Tune(w,t),
 	}
 	
+	bindings = {
+		'TAILED': DM.testme
+	}
+	
 	builtins = {
-		'TAILED':		lambda w,t: Doubletalk.Tailed(w,t)
+		'TAILED':		lambda w,t: Doubletalk.Tailed(w,t,Doubletalk.bindings[w])
 	}
 	
 	clause = {
@@ -137,11 +159,34 @@ class Doubletalk(object):
 		}
 	}
 	
+	"""
+	MIXINS
+	
+	"""
+	class Escalar(object):
+		pass
+	
 	class Evaluable(object):
 		pass
 	
 	class Callable(object):
 		pass
+	
+	# keywords
+	class Block(object):
+		# def begin
+		# def end
+		# def length
+		pass
+			
+	class Control(object):
+		pass
+	
+	
+	"""
+	DATATYPES
+	
+	"""
 	
 	class Lexeme(object):
 		def __init__(self, word, pos=(None,None), **kwargs):
@@ -375,18 +420,7 @@ class Doubletalk(object):
 			else:
 				return v
 				
-
-	# keywords
-	class Block(object):
-		# def begin
-		# def end
-		# def length
-		pass
-			
-	class Control(object):
-		pass
 	
-		
 	class Keyword(Lexeme):
 		
 		def type(self):
@@ -394,6 +428,7 @@ class Doubletalk(object):
 			
 		def __repr__(self):
 			return '<keyword %s>' % (self.word)
+			
 	
 	class Procedure(Keyword,Callable,Block,Control):
 
@@ -519,38 +554,26 @@ class Doubletalk(object):
 
 		def parse(self, parser, **kwargs):
 			# store condition pre-built
-			condition = parser.build(parser.expression(until=Doubletalk.Then))
+			condition = parser.build(parser.expression(until=Doubletalk.NewLine))
 			return [self, condition]
 		
 
 		def eval(self, interp, expr):
+			# if condition is truthly, interpreter executes the following block
 			interp.push_read_enabled(bool(interp.eval(expr)))
 			interp.push_block(self)
 	
-		
-	class Then(Keyword,Control):
-		
-		def type(self):
-			return '<then>'
-			
-		def parse(self, parser, **kwargs):
-			#block = parser.parse(until=(Doubletalk.Else, Doubletalk.End))
-			return [self]
-		
-		def eval(self, interp, expr):
-			interp.push_read_enabled(True if interp.stack() else False)
-
-
+	
 	class Else(Keyword,Control):
 		
 		def type(self):
 			return '<else>'
 		
 		def parse(self, parser, **kwargs):
-			#block = parser.parse(until=Doubletalk.End)
 			return [self]
 			
 		def eval(self, interp, expr):
+			# if last block was executed following will not, and viceversa
 			interp.toggle_read_enabled()
 
 	
@@ -560,7 +583,6 @@ class Doubletalk(object):
 			return '<end>'
 			
 		def parse(self, parser, **kwargs):
-			#block = parser.parse(until=Doubletalk.End)
 			return [self]
 		
 		def eval(self, interp, expr):
@@ -638,9 +660,10 @@ class Doubletalk(object):
 					
 	class Tailed(BuiltIn):
 		
-		def __init__(self, *args, **kwargs):
-			self.bind = DM.testme
-			super(Doubletalk.Tailed, self).__init__(*args, **kwargs)	
+		def __init__(self, token, pos=(None,None), binding=None, **kwargs):
+			# function binding
+			self.bind = binding
+			super(Doubletalk.Tailed, self).__init__(token,pos, **kwargs)	
 				
 				
 	class Prnt(Keyword):
@@ -780,9 +803,3 @@ class Doubletalk(object):
 			return '<expression>'
 	
 
-class DM(object):
-	@staticmethod
-	def testme(*args):
-		print "I'm the DM! Your God speaking. You said:"
-		print args
-		return True

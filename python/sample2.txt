@@ -11,13 +11,13 @@ END
 
 PROCEDURE counter-surveillance
 
-	TRAVEL RANDOM [Bradenburg, Metro, Autobahn] UNTIL NOT FOLLOWED
+	TRAVEL RANDOM [Bradenburg, Metro, Autobahn] UNTIL NOT TAILED
 	GO Post office
 
 	GO Mitte >> Hengelsplatz BY cab
 	GO Post Office BY walk
 	WAIT UNTIL t+00:10
-	ASSERT NOT FOLLOWED
+	ASSERT NOT TAILED
 	FAILSAFE
 		GO Post office
 		END
@@ -26,12 +26,21 @@ PROCEDURE counter-surveillance
 END
 
 BEGIN July 18 1955 10:15
-
-	PROCEDE counter-surveillance
-	GO Hengelsplatz BY cab
-	WAIT @John UNTIL 11:30
-	FAILSAFE
-		GO Cafe
-		TRANSMIT DEBRIEF
-		END
+	
+	HIDDEN
+		PROCEDE counter-surveillance
+		GO Hengelsplatz BY cab
+		WAIT @John UNTIL 11:30
+		FAILSAFE
+			GO Cafe
+			TRANSMIT DEBRIEF
+			END
+	COVER
+		GO Mitte BY cab
+		WAIT @Karl UNTIL 11:30
+		FAILSAFE
+			GO Cafe
+			TRANSMIT DEBRIEF
+			END
+	END
 END
