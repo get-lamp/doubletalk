@@ -1,4 +1,5 @@
-import StringIO, re
+#import StringIO 
+import re
 
 class DM(object):
 	@staticmethod
@@ -12,7 +13,7 @@ class DM(object):
 #	get rid of tags. Use isinstace() instead
 #	check for Evaluable & Callable classes
 
-class Doubletalk(object):
+class Lang(object):
 	"""
 	Coldwar scripting language	
 	"""
@@ -45,86 +46,86 @@ class Doubletalk(object):
 	
 	@staticmethod
 	def identifier(w,t):
-		if w in Doubletalk.keywords:
-			return Doubletalk.keywords[w](w,t)
-		elif w in Doubletalk.builtins:
-			return Doubletalk.builtins[w](w,t)
-		elif w in Doubletalk.parameters:
-			return Doubletalk.parameters[w](w,t)
+		if w in Lang.keywords:
+			return Lang.keywords[w](w,t)
+		elif w in Lang.builtins:
+			return Lang.builtins[w](w,t)
+		elif w in Lang.parameters:
+			return Lang.parameters[w](w,t)
 		else:
-			return Doubletalk.Identifier(w,t)
+			return Lang.Identifier(w,t)
 		
 	
 	symbols = {
-		r_space: 			lambda w,t: Doubletalk.Space(w,t),
-		r_newline:			lambda w,t: Doubletalk.NewLine(w,t),
-		r_tab:				lambda w,t: Doubletalk.Tab(w,t),
-		r_bracket_l: 		lambda w,t: Doubletalk.Bracket(w,t,open=True),
-		r_bracket_r:		lambda w,t: Doubletalk.Bracket(w,t,open=False),
-		r_double_quote: 	lambda w,t: Doubletalk.DoubleQuote(w,t),
-		r_single_quote: 	lambda w,t: Doubletalk.SingleQuote(w,t),
-		r_parentheses_l: 	lambda w,t: Doubletalk.Parentheses(w,t, open=True),
-		r_parentheses_r:	lambda w,t: Doubletalk.Parentheses(w,t, open=False),
+		r_space: 			lambda w,t: Lang.Space(w,t),
+		r_newline:			lambda w,t: Lang.NewLine(w,t),
+		r_tab:				lambda w,t: Lang.Tab(w,t),
+		r_bracket_l: 		lambda w,t: Lang.Bracket(w,t,open=True),
+		r_bracket_r:		lambda w,t: Lang.Bracket(w,t,open=False),
+		r_double_quote: 	lambda w,t: Lang.DoubleQuote(w,t),
+		r_single_quote: 	lambda w,t: Lang.SingleQuote(w,t),
+		r_parentheses_l: 	lambda w,t: Lang.Parentheses(w,t, open=True),
+		r_parentheses_r:	lambda w,t: Lang.Parentheses(w,t, open=False),
 		r_slash: {
-			r_asterisk:		lambda w,t: Doubletalk.CommentBlock(w,t, open=True),
-			r_slash: 		lambda w,t: Doubletalk.CommentLine(w,t),
-			None:			lambda w,t: Doubletalk.Divide(w,t)
+			r_asterisk:		lambda w,t: Lang.CommentBlock(w,t, open=True),
+			r_slash: 		lambda w,t: Lang.CommentLine(w,t),
+			None:			lambda w,t: Lang.Divide(w,t)
 		},
 		r_asterisk: {
-			r_slash:		lambda w,t: Doubletalk.CommentBlock(w,t, open=False),
-			None:			lambda w,t: Doubletalk.Multiply(w,t)
+			r_slash:		lambda w,t: Lang.CommentBlock(w,t, open=False),
+			None:			lambda w,t: Lang.Multiply(w,t)
 		},
-		r_comma: 			lambda w,t: Doubletalk.Comma(w,t),
+		r_comma: 			lambda w,t: Lang.Comma(w,t),
 		r_bang: {
 			r_equal: {
-				r_equal:	lambda w,t: Doubletalk.InequalStrict(w,t),
-				None:		lambda w,t: Doubletalk.Inequal(w,t)
+				r_equal:	lambda w,t: Lang.InequalStrict(w,t),
+				None:		lambda w,t: Lang.Inequal(w,t)
 			},
-			None: 			lambda w,t: Doubletalk.Assign(w,t)
+			None: 			lambda w,t: Lang.Assign(w,t)
 		},
 		r_equal: {
 			r_equal: {
-				r_equal:	lambda w,t: Doubletalk.EqualStrict(w,t),
-				None:		lambda w,t: Doubletalk.Equal(w,t)
+				r_equal:	lambda w,t: Lang.EqualStrict(w,t),
+				None:		lambda w,t: Lang.Equal(w,t)
 			},
-			None: 			lambda w,t: Doubletalk.Assign(w,t)
+			None: 			lambda w,t: Lang.Assign(w,t)
 		},
 		r_plus: {
-			r_plus:			lambda w,t: Doubletalk.Increment(w,t),
-			None:			lambda w,t: Doubletalk.Add(w,t)
+			r_plus:			lambda w,t: Lang.Increment(w,t),
+			None:			lambda w,t: Lang.Add(w,t)
 		},
-		r_float: 			lambda w,t: Doubletalk.Float(w,t),
-		r_int: 				lambda w,t: Doubletalk.Integer(w,t),
+		r_float: 			lambda w,t: Lang.Float(w,t),
+		r_int: 				lambda w,t: Lang.Integer(w,t),
 		r_dash: {
-			r_dash:			lambda w,t: Doubletalk.Decrement(w,t),
-			r_float: 		lambda w,t: Doubletalk.Float(w,t),
-			r_int: 			lambda w,t: Doubletalk.Integer(w,t),
-			None:			lambda w,t: Doubletalk.Subtract(w,t)
+			r_dash:			lambda w,t: Lang.Decrement(w,t),
+			r_float: 		lambda w,t: Lang.Float(w,t),
+			r_int: 			lambda w,t: Lang.Integer(w,t),
+			None:			lambda w,t: Lang.Subtract(w,t)
 		},
-		r_not:				lambda w,t: Doubletalk.Not(w,t),
-		r_identifier:		lambda w,t: Doubletalk.identifier(w,t),
+		r_not:				lambda w,t: Lang.Not(w,t),
+		r_identifier:		lambda w,t: Lang.identifier(w,t),
 		r_atsign: {
-			r_identifier:	lambda w,t: Doubletalk.Character(w,t),
-			None: 			lambda w,t: Doubletalk.Ego(w,t)
+			r_identifier:	lambda w,t: Lang.Character(w,t),
+			None: 			lambda w,t: Lang.Ego(w,t)
 		}
 	}
 
 	keywords = {
-		'prnt':			lambda w,t: Doubletalk.Prnt(w,t),
-		'if':			lambda w,t: Doubletalk.If(w,t),
-		'else':			lambda w,t: Doubletalk.Else(w,t),
-		'end':			lambda w,t: Doubletalk.End(w,t),
-		'procedure':	lambda w,t: Doubletalk.Procedure(w,t),
-		'def':			lambda w,t: Doubletalk.Def(w,t),
-		'exec':			lambda w,t: Doubletalk.Exec(w,t),
-		'include':		lambda w,t: Doubletalk.Include(w,t),
-		'WAIT':			lambda w,t: Doubletalk.Wait(w,t)
+		'prnt':			lambda w,t: Lang.Prnt(w,t),
+		'if':			lambda w,t: Lang.If(w,t),
+		'else':			lambda w,t: Lang.Else(w,t),
+		'end':			lambda w,t: Lang.End(w,t),
+		'procedure':	lambda w,t: Lang.Procedure(w,t),
+		'def':			lambda w,t: Lang.Def(w,t),
+		'exec':			lambda w,t: Lang.Exec(w,t),
+		'include':		lambda w,t: Lang.Include(w,t),
+		'WAIT':			lambda w,t: Lang.Wait(w,t)
 	}
 	
 	parameters = {
-		'UNTIL':		lambda w,t: Doubletalk.Until(w,t),
-		'BY':			lambda w,t: Doubletalk.By(w,t),
-		'TUNE':			lambda w,t: Doubletalk.Tune(w,t),
+		'UNTIL':		lambda w,t: Lang.Until(w,t),
+		'BY':			lambda w,t: Lang.By(w,t),
+		'TUNE':			lambda w,t: Lang.Tune(w,t),
 	}
 	
 	bindings = {
@@ -132,21 +133,21 @@ class Doubletalk(object):
 	}
 	
 	builtins = {
-		'TAILED':		lambda w,t: Doubletalk.Tailed(w,t,Doubletalk.bindings[w])
+		'TAILED':		lambda w,t: Lang.Tailed(w,t,Lang.bindings[w])
 	}
 	
 	clause = {
-		r'<parameter>':	lambda: Doubletalk.expression
+		r'<parameter>':	lambda: Lang.expression
 	}
 
 	expression = {
-		r'<unary-op>': lambda: Doubletalk.expression,
-		r'<delim>|<bracket>': lambda: Doubletalk.expression,
+		r'<unary-op>': lambda: Lang.expression,
+		r'<delim>|<bracket>': lambda: Lang.expression,
 		r'<const>|<ident>|<built-in>': {
-			r'<bracket>|<const>|<ident>|<built-in>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in>'],
-			'<op>': lambda: Doubletalk.expression,
-			'</delim>|</bracket>': lambda: Doubletalk.expression[r'<const>|<ident>|<built-in>'],
-			'<comma>': lambda: Doubletalk.expression
+			r'<bracket>|<const>|<ident>|<built-in>': lambda: Lang.expression[r'<const>|<ident>|<built-in>'],
+			'<op>': lambda: Lang.expression,
+			'</delim>|</bracket>': lambda: Lang.expression[r'<const>|<ident>|<built-in>'],
+			'<comma>': lambda: Lang.expression
 		}
 	}
 	
@@ -222,11 +223,11 @@ class Doubletalk(object):
 
 	class String(str, Constant):
 		def __init__(self, string, pos=(None,None)):
-			super(Doubletalk.String, self).__init__(string, pos)
+			super(Lang.String, self).__init__(string, pos)
 		
 		def __new__(cls, *args, **kw):
 			string,pos = args
-			return  super(Doubletalk.String, cls).__new__(cls, string)
+			return  super(Lang.String, cls).__new__(cls, string)
 			
 		def eval(self):
 			return str(self)
@@ -235,11 +236,11 @@ class Doubletalk(object):
 	class Float(float, Constant):
 		
 		def __init__(self, number, pos=(None,None)):
-			super(Doubletalk.Float, self).__init__(number, pos)
+			super(Lang.Float, self).__init__(number, pos)
 		
 		def __new__(cls, *args, **kw):
 			number,pos = args
-			return  super(Doubletalk.Float, cls).__new__(cls, number)
+			return  super(Lang.Float, cls).__new__(cls, number)
 
 		def eval(self):
 			return self
@@ -247,11 +248,11 @@ class Doubletalk(object):
 	class Integer(int, Constant):
 		
 		def __init__(self, number, pos=(None,None)):
-			super(Doubletalk.Integer, self).__init__(number, pos)
+			super(Lang.Integer, self).__init__(number, pos)
 		
 		def __new__(cls, *args, **kw):
 			number,pos = args
-			return  super(Doubletalk.Integer, cls).__new__(cls, number)
+			return  super(Lang.Integer, cls).__new__(cls, number)
 
 		def eval(self):
 			return self
@@ -265,12 +266,12 @@ class Doubletalk(object):
 			return '<list>'
 			
 		def __add__(self, other):
-			return Doubletalk.List(list.__add__(self, other))
+			return Lang.List(list.__add__(self, other))
 		
 		def __getitem__(self, item):
 			result = list.__getitem__(self, item)
 			try:
-				return Doubletalk.List(result)
+				return Lang.List(result)
 			except TypeError:
 				return result
         	
@@ -420,8 +421,8 @@ class Doubletalk(object):
 		def __init__(self, word, pos=(None,None), **kwargs):
 			self.address	= None
 			self.identifier = None
-			self.signature 	= Doubletalk.List()
-			super(Doubletalk.Procedure, self).__init__(word, pos=(None,None), **kwargs)
+			self.signature 	= Lang.List()
+			super(Lang.Procedure, self).__init__(word, pos=(None,None), **kwargs)
 			
 		def type(self):
 			return '<procedure>'
@@ -431,7 +432,7 @@ class Doubletalk(object):
 
 			# parse identifier
 			i = parser.next()
-			if not isinstance(i, Doubletalk.Identifier):
+			if not isinstance(i, Lang.Identifier):
 				raise Exception('Procedure must have an identifier')
 			else:
 				self.identifier = [i]
@@ -440,7 +441,7 @@ class Doubletalk(object):
 				# get arguments
 				self.signature = parser.build(parser.expression())
 			except Exception as e:
-				self.signature = Doubletalk.List()
+				self.signature = Lang.List()
 							
 			return [self, self.identifier, self.signature]
 		
@@ -466,7 +467,7 @@ class Doubletalk(object):
 	class Def(Procedure):
 		def __init__(self, word, pos=(None,None), **kwargs):
 			self.block = []
-			super(Doubletalk.Procedure, self).__init__(word, pos=(None,None), **kwargs)
+			super(Lang.Procedure, self).__init__(word, pos=(None,None), **kwargs)
 
 		def parse(self, parser, **kwargs):	
 			# parse identifier
@@ -476,10 +477,10 @@ class Doubletalk(object):
 				# get arguments
 				self.signature = parser.build(parser.expression())
 			except Exception as e:
-				self.signature = Doubletalk.List()
+				self.signature = Lang.List()
 				
 			# get function block
-			self.block = parser.block(until=Doubletalk.End)
+			self.block = parser.block(until=Lang.End)
 
 			return [self, self.identifier, self.signature]
 
@@ -510,7 +511,7 @@ class Doubletalk(object):
 			try:
 				arguments = parser.build(parser.expression())
 			except Exception as e:
-				arguments = Doubletalk.List()
+				arguments = Lang.List()
 				
 			return [self, identifier, arguments]
 		
@@ -526,7 +527,7 @@ class Doubletalk(object):
 			# get procedure from scope
 			routine = interp.fetch(identifier)
 			
-			if not isinstance(routine, Doubletalk.Callable):
+			if not isinstance(routine, Lang.Callable):
 				raise Exception('Not a callable object')
 		
 			return interp.call(routine, arguments)
@@ -539,7 +540,7 @@ class Doubletalk(object):
 
 		def parse(self, parser, **kwargs):
 			# store condition pre-built
-			condition = parser.build(parser.expression(until=Doubletalk.NewLine))
+			condition = parser.build(parser.expression(until=Lang.NewLine))
 			return [self, condition]
 		
 
@@ -574,12 +575,12 @@ class Doubletalk(object):
 		
 			block = interp.block()
 			
-			if isinstance(block, Doubletalk.If):
+			if isinstance(block, Lang.If):
 				interp.endif()
-			elif isinstance(block, Doubletalk.Procedure):
+			elif isinstance(block, Lang.Procedure):
 				print 'Ending procedure block'
 				interp.endcall()
-			elif isinstance(block, Doubletalk.Def):
+			elif isinstance(block, Lang.Def):
 				print 'Ending def block'
 				interp.endcall()
 			else:
@@ -589,7 +590,7 @@ class Doubletalk(object):
 	class Parameter(Lexeme):
 	
 		def __init__(self, *args, **kwargs):
-			super(Doubletalk.Parameter, self).__init__(*args, **kwargs)
+			super(Lang.Parameter, self).__init__(*args, **kwargs)
 			
 		def eval(self, scope, arguments=None, interp=None):
 			return interp.eval(arguments)
@@ -604,19 +605,19 @@ class Doubletalk(object):
 	class Until(Parameter):
 				
 		def __init__(self, *args, **kwargs):
-			super(Doubletalk.Until, self).__init__(*args, **kwargs)
+			super(Lang.Until, self).__init__(*args, **kwargs)
 		
 		
 	class By(Parameter):
 		
 		def __init__(self, *args, **kwargs):
-			super(Doubletalk.By, self).__init__(*args, **kwargs)
+			super(Lang.By, self).__init__(*args, **kwargs)
 		
 	
 	class Tune(Parameter):
 		
 		def __init__(self, *args, **kwargs):
-			super(Doubletalk.Tune, self).__init__(*args, **kwargs)
+			super(Lang.Tune, self).__init__(*args, **kwargs)
 			
 	class Wait(Keyword):
 		
@@ -625,7 +626,7 @@ class Doubletalk(object):
 		
 		def parse(self, parser, **kwargs):
 			self.condition	= parser.build(parser.expression())
-			self.until		= parser.build(parser.clause(Doubletalk.Until))
+			self.until		= parser.build(parser.clause(Lang.Until))
 			return [self, self.condition, self.until]
 		
 		def eval(self, interp, expression):
@@ -648,7 +649,7 @@ class Doubletalk(object):
 		def __init__(self, token, pos=(None,None), binding=None, **kwargs):
 			# function binding
 			self.bind = binding
-			super(Doubletalk.Tailed, self).__init__(token,pos, **kwargs)	
+			super(Lang.Tailed, self).__init__(token,pos, **kwargs)	
 				
 				
 	class Prnt(Keyword):
@@ -711,7 +712,7 @@ class Doubletalk(object):
 		def __init__(self, rules):
 			self.grammar	= rules
 			self.legal 		= rules
-			super(Doubletalk.Grammar, self).__init__()
+			super(Lang.Grammar, self).__init__()
 		
 		# does lexeme belong to this grammar
 		@staticmethod
@@ -767,7 +768,7 @@ class Doubletalk(object):
 			if l:
 				# climb up in grammar tree
 				self.legal = self.legal[l] if not callable(self.legal[l]) else self.legal[l]()
-				super(Doubletalk.Grammar, self).append(i)	
+				super(Lang.Grammar, self).append(i)	
 				return self
 				
 			# close
@@ -775,16 +776,15 @@ class Doubletalk(object):
 		
 	class Clause(Grammar):
 		def __init__(self):
-			super(Doubletalk.Clause, self).__init__(Doubletalk.clause)
+			super(Lang.Clause, self).__init__(Lang.clause)
 		
 		def type(self):
 			return '<clause>'
 		
 	class Expression(Grammar):
 		def __init__(self):
-			super(Doubletalk.Expression, self).__init__(Doubletalk.expression)
+			super(Lang.Expression, self).__init__(Lang.expression)
 		
 		def type(self):
 			return '<expression>'
-	
 

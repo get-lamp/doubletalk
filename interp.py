@@ -1,4 +1,5 @@
 from parser import *
+from doubletalk import Doubletalk
 
 OPERAND_L	= 0
 OPERATOR 	= 1
