@@ -1,3 +1,4 @@
 epydoc==3.0.1
 graphviz==0.4.6
+-e git+https://github.com/64kbytes/lang.git@205a950995ef35b623d37a4a3653328eb4c10d2e#egg=lang-master
 wheel==0.24.0

@@ -1,5 +1,5 @@
-#!/usr/bin/python
-from interp import *
+import lang
+from lang.interp import *
 
 class Terminal:
 	def __init__(self):
